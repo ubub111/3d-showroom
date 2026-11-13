@@ -1,0 +1,12 @@
+product_id,option_id,option_name,value_id,value_label,modifier,asset_url,color,material_name,roughness,metalness
+facet,finish,Отделка,amber,Янтарь,0,,#b47435,Finish,0.25,0.56
+facet,finish,Отделка,smoke,Графит,400,,#424956,Finish,0.32,0.72
+facet,finish,Отделка,olive,Оливковая,600,,#697655,Finish,0.26,0.52
+facet,base,Подставка,standard,Стандартная,0,,,,,
+facet,base,Подставка,tall,Высокая,800,/models/facet-tall.glb,,,,
+compass,finish,Металл,brass,Латунь,0,,#b78b4a,Finish,0.25,0.75
+compass,finish,Металл,silver,Серебристый,250,,#b7bec4,Finish,0.26,0.78
+polar,finish,Эмаль,blue,Кобальт,0,,#263e73,Finish,0.25,0.15
+polar,finish,Эмаль,red,Бордовый,100,,#801d39,Finish,0.28,0.14
+dune,finish,Глазурь,ivory,Слоновая кость,0,,#f2e4cb,Finish,0.24,0.04
+dune,finish,Глазурь,rose,Пыльная роза,100,,#b97f78,Finish,0.25,0.04

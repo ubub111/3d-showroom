@@ -1,0 +1,6 @@
+id,parent_id,title,sort_order,cover_url,description
+awards,,Награды,10,/images/awards.webp,Памятные статуэтки и награды
+tokens,,Жетоны,20,/images/tokens.webp,Коллекционные и памятные жетоны
+pins,,Значки,30,/images/pins.webp,Металлические и эмалевые значки
+mugs,,Кружки,40,/images/mugs.webp,Керамические кружки
+medals,awards,Медали,20,/images/tokens.webp,Памятные медали

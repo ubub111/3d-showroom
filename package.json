@@ -1,0 +1,38 @@
+{
+  "name": "3d-showroom",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "catalog": "node scripts/import-catalog.mjs",
+    "models": "node scripts/create-models.mjs",
+    "predev": "npm run catalog",
+    "dev": "vite",
+    "prebuild": "npm run catalog",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10",
+    "@react-three/fiber": "^9",
+    "lucide-react": "^0.468.0",
+    "react": "^19",
+    "react-dom": "^19",
+    "three": "^0.183"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58",
+    "@tailwindcss/vite": "^4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.183",
+    "@vitejs/plugin-react": "^5",
+    "csv-parse": "^6",
+    "tailwindcss": "^4",
+    "typescript": "~5.9.3",
+    "vite": "^7",
+    "zod": "^4"
+  }
+}

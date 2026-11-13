@@ -1,0 +1,57 @@
+import rawCatalog from './catalog.json'
+
+export interface Category {
+  id: string
+  title: string
+  parent_id?: string
+  cover_url?: string
+  description?: string
+}
+
+export interface OptionValue {
+  value_id: string
+  value_label: string
+  modifier: number
+  asset_url?: string
+  color?: string
+  material_name?: string
+  roughness?: number
+  metalness?: number
+}
+
+export interface Option {
+  id: string
+  label: string
+  values: OptionValue[]
+}
+
+export interface Product {
+  id: string
+  category_id: string
+  title: string
+  sku: string
+  price?: number
+  model_url?: string
+  image_url?: string
+  store_url?: string
+  description?: string
+  options: Option[]
+}
+
+export const catalog: { categories: Category[]; products: Product[] } = rawCatalog
+
+export const asset = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
+export const categoryLink = (id: string) => `#/catalog/${id}`
+export const productLink = (id: string) => `#/product/${id}`
+export const rubles = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 })
+
+export function categoryPath(id: string): Category[] {
+  const path = []
+  let category = catalog.categories.find((item) => item.id === id)
+  while (category) {
+    path.unshift(category)
+    const parentId = category.parent_id
+    category = catalog.categories.find((item) => item.id === parentId)
+  }
+  return path
+}
