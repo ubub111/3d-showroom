@@ -16,8 +16,11 @@ const pinAngles = [
 function Studio() {
   return <>
     <StudioEnvironment />
-    <ambientLight intensity={0.7} />
-    <directionalLight position={[3, 6, 4]} intensity={2.2} castShadow shadow-mapSize={[1024, 1024]} shadow-bias={-0.0003} />
+    <ambientLight intensity={0.42} />
+    <directionalLight position={[3, 6, 4]} intensity={1.82} castShadow shadow-mapSize={[2048, 2048]}
+      shadow-camera-left={-3} shadow-camera-right={3} shadow-camera-top={3} shadow-camera-bottom={-3}
+      shadow-normalBias={0.018} shadow-bias={-0.00015} />
+    <directionalLight position={[-4, 2, -2]} intensity={0.85} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.018, 0]} receiveShadow>
       <planeGeometry args={[40, 40]} />
       <shadowMaterial opacity={0.16} />
@@ -61,7 +64,7 @@ export default function Viewer({ url, image, finishes, label, pinViews = false }
   return <ViewerBoundary key={url} fallback={unavailable}>
     <div className="viewer" aria-label={label}>
       <Canvas
-        frameloop={spin ? 'always' : 'demand'} shadows dpr={[1, 1.5]} fallback={unavailable}
+        frameloop={spin ? 'always' : 'demand'} shadows dpr={[1.5, 2.5]} gl={{ antialias: true }} fallback={unavailable}
         camera={{ position: [3.35, 2.4, 4.7], fov: 38, zoom }}
         onCreated={({ gl }) => { gl.domElement.setAttribute('aria-label', label) }}
       >

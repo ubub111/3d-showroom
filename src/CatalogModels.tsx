@@ -97,7 +97,7 @@ export default function CatalogModels({ entries }: { entries: PreviewEntry[] }) 
   }, [])
   return <ViewerBoundary fallback={<span className="scene-status">3D недоступно</span>}>
     <div className="catalog-canvas" aria-hidden="true">
-      <Canvas frameloop={animate ? 'always' : 'demand'} dpr={[1, 1.25]} gl={{ alpha: true, antialias: true }}
+      <Canvas frameloop={animate ? 'always' : 'demand'} dpr={[1, 1.5]} gl={{ alpha: true, antialias: true }}
         fallback={<span className="scene-status">3D недоступно</span>}>
         <ClearFrame />
         {!animate && <RefreshOnInteraction />}

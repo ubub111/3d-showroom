@@ -63,7 +63,7 @@ export default function PinShowcase({ products, onOpen }: { products: Product[];
     onPointerLeave={() => { drag.current = null }}
     onPointerCancel={() => { drag.current = null }}>
     <ViewerBoundary fallback={<p className="pin-scene-caption">3D недоступно</p>}>
-      <Canvas fallback={<p className="pin-scene-caption">3D недоступно</p>} eventSource={stage} dpr={[1, 1.5]} camera={{ position: [0, 1.55, 12.4], fov: 31 }}
+      <Canvas fallback={<p className="pin-scene-caption">3D недоступно</p>} eventSource={stage} dpr={[1, 1.75]} camera={{ position: [0, 1.55, 12.4], fov: 31 }}
         style={{ touchAction: 'pan-y' }} onCreated={({ gl }) => {
           gl.domElement.setAttribute('aria-label', 'Значки в общей 3D-сцене')
         }}>
