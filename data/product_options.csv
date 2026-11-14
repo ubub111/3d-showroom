@@ -10,3 +10,5 @@ polar,finish,Эмаль,blue,Кобальт,0,,#263e73,Finish,0.25,0.15
 polar,finish,Эмаль,red,Бордовый,100,,#801d39,Finish,0.28,0.14
 dune,finish,Глазурь,ivory,Слоновая кость,0,,#f2e4cb,Finish,0.24,0.04
 dune,finish,Глазурь,rose,Пыльная роза,100,,#b97f78,Finish,0.25,0.04
+medal,finish,Металл,silver,Серебристый,0,,#9aafc0,Finish,0.29,0.68
+medal,finish,Металл,bronze,Бронза,300,,#b7804e,Finish,0.32,0.67

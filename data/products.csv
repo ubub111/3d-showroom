@@ -3,4 +3,4 @@ facet,awards,Награда «Грань»,AW-001,4900,/models/facet.glb,/images
 compass,tokens,Жетон «Компас»,TK-001,1200,/models/compass.glb,/images/tokens.webp,10,,Рельефный металлический жетон с лучами компаса и фактурной кромкой.
 polar,pins,Значок «Полюс»,PN-001,690,/models/polar.glb,/images/pins.webp,10,,Восьмиконечная звезда с эмалевым центром и металлической окантовкой.
 dune,mugs,Кружка «Дюна»,MG-001,1450,/models/dune.glb,/images/mugs.webp,10,,Керамическая кружка с округлой ручкой. Можно выбрать оттенок глазури.
-medal,medals,Медаль «Север»,AW-002,1800,,/images/tokens.webp,10,,Памятная медаль из демонстрационного каталога.
+medal,medals,Медаль «Север»,AW-002,1800,/models/medal.glb,/images/tokens.webp,10,,Памятная медаль из демонстрационного каталога.

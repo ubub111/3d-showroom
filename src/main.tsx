@@ -1,99 +1,26 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronLeft, ChevronRight, Link2 } from 'lucide-react'
-import { asset, catalog, categoryLink, categoryPath, productLink, rubles, type Category, type OptionValue, type Product } from './catalog'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronRight, Link2 } from 'lucide-react'
+import { asset, catalog, categoryLink, categoryPath, rubles, type OptionValue, type Product } from './catalog'
+import { categories, Showroom } from './Showroom'
 import './styles.css'
 
 const Viewer = lazy(() => import('./Viewer'))
-const categories = catalog.categories.filter((category) => !category.parent_id)
-const slides = categories.filter((category) => category.cover_url)
-const noFinishes: OptionValue[] = []
-
-function Header() {
+function Header({ active }: { active?: string }) {
   return <header className="site-header">
     <div className="shell header-inner">
-      <a href="#/" className="brand" aria-label="Форма, главная"><span><Box size={21} strokeWidth={1.8} /></span>форма<span className="brand-dot">.</span></a>
-      <nav aria-label="Главная навигация">
-        <a href="#/catalog">Каталог</a>
-        <a href="#/about">О проекте</a>
+      <a href="#/" className="brand" aria-label="Форма, главная"><Box size={28} strokeWidth={1.5} /><span>ФОРМА<small>3D-ШОУРУМ</small></span></a>
+      <nav aria-label="Разделы">
+        <a href="#/" aria-current={active === '' ? 'page' : undefined}>Главная</a>
+        {categories.map((category) => <a key={category.id} href={categoryLink(category.id)}
+          aria-current={active === category.id ? 'page' : undefined}>{category.title}</a>)}
       </nav>
-      <a className="header-link" href="#/catalog">Открыть каталог <ArrowUpRight size={15} /></a>
     </div>
   </header>
 }
 
-function Cover({ path, eager = false }: { path?: string; eager?: boolean }) {
-  if (!path) return <div className="cover-placeholder"><Box size={40} strokeWidth={1} /></div>
-  return <img src={asset(path)} alt="" draggable={false} loading={eager ? 'eager' : 'lazy'} />
-}
-
-function Hero() {
-  const [index, setIndex] = useState(0)
-  const slide = slides[index]
-  const [showPreview, setShowPreview] = useState(false)
-  const preview = catalog.products.find((product) => product.category_id === slide?.id && product.model_url)
-  const touchStart = useRef<number | null>(null)
-  const move = (delta: number) => {
-    setShowPreview(false)
-    setIndex((value) => (value + delta + slides.length) % slides.length)
-  }
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (slides.length > 1 && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-      event.preventDefault()
-      move(event.key === 'ArrowRight' ? 1 : -1)
-    }
-  }
-
-  return <section className="hero">
-    <div className="hero-copy">
-      <p className="eyebrow"><span /> Интерактивный шоурум</p>
-      <h1>Рассмотрите<br />со всех сторон<span>.</span></h1>
-      <p className="hero-description">Вращайте изделия в 3D, меняйте материалы и сохраняйте свою комплектацию.</p>
-      <a className="button primary" href="#/catalog">Смотреть каталог <ArrowRight size={19} /></a>
-    </div>
-    {slide && <div className="hero-media" role="group" aria-label="Слайдер категорий" onKeyDown={onKeyDown}
-      onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX }}
-      onTouchEnd={(event) => {
-        if (showPreview || touchStart.current === null) return
-        const delta = event.changedTouches[0].clientX - touchStart.current
-        touchStart.current = null
-        if (Math.abs(delta) > 45) move(delta < 0 ? 1 : -1)
-      }}>
-      {showPreview && preview ? <Suspense fallback={<Cover path={slide.cover_url} eager />}>
-        <Viewer key={preview.id} url={preview.model_url} image={slide.cover_url} finishes={noFinishes}
-          label={`3D-превью: ${preview.title}`} preview />
-      </Suspense> : <Cover key={slide.id} path={slide.cover_url} eager />}
-      {preview && <button className="preview-toggle" aria-pressed={showPreview} onClick={() => setShowPreview(!showPreview)}>
-        <Box size={16} /> {showPreview ? 'Закрыть 3D' : 'Смотреть в 3D'}
-      </button>}
-      <a href={categoryLink(slide.id)} className="slide-label" aria-live="polite">
-        {slide.title} <ArrowUpRight size={16} />
-      </a>
-      {slides.length > 1 && <div className="slide-controls">
-        <button aria-label="Предыдущий слайд" onClick={() => move(-1)}><ChevronLeft size={20} /></button>
-        <button aria-label="Следующий слайд" onClick={() => move(1)}><ChevronRight size={20} /></button>
-      </div>}
-    </div>}
-  </section>
-}
-
-function CategoryGrid({ items }: { items: Category[] }) {
-  return <div className="category-grid">
-    {items.map((category) => <a className="category-card" key={category.id} href={categoryLink(category.id)}>
-      <div className="category-cover"><Cover path={category.cover_url} /></div>
-      <div className="category-label"><span>{category.title}</span><ArrowUpRight size={19} strokeWidth={1.65} /></div>
-    </a>)}
-  </div>
-}
-
-function Home() {
-  return <>
-    <Hero />
-    <section className="home-categories">
-      <div className="section-header"><h2>Категории</h2><a href="#/catalog">Весь каталог <ArrowDown size={16} /></a></div>
-      <CategoryGrid items={categories} />
-    </section>
-  </>
+function Cover({ path }: { path?: string }) {
+  return path ? <img src={asset(path)} alt="" draggable={false} /> : <Box size={40} strokeWidth={1} />
 }
 
 function Breadcrumbs({ items }: { items: { title: string; href: string }[] }) {
@@ -101,42 +28,6 @@ function Breadcrumbs({ items }: { items: { title: string; href: string }[] }) {
     <a href="#/">Главная</a>
     {items.map((item) => <span key={item.href}><ChevronRight size={13} /><a href={item.href}>{item.title}</a></span>)}
   </nav>
-}
-
-function CatalogPage({ id }: { id?: string }) {
-  const category = catalog.categories.find((item) => item.id === id)
-  if (id && !category) return <Missing />
-  const children = catalog.categories.filter((item) => item.parent_id === id)
-  const products = catalog.products.filter((product) => !id || product.category_id === id)
-  return <div className="inner-page">
-    <Breadcrumbs items={[{ title: 'Каталог', href: '#/catalog' }, ...categoryPath(id ?? '').slice(0, -1).map((item) => ({
-      title: item.title, href: categoryLink(item.id),
-    }))]} />
-    <div className="page-heading">
-      <h1>{category?.title ?? 'Каталог'}</h1>
-      {category?.description && <p>{category.description}</p>}
-    </div>
-    <nav className="filter-row" aria-label="Категории каталога">
-      <a href="#/catalog" aria-current={id ? undefined : 'page'}>Все товары</a>
-      {categories.map((item) => <a key={item.id} href={categoryLink(item.id)}
-        aria-current={categoryPath(id ?? '')[0]?.id === item.id ? 'page' : undefined}>{item.title}</a>)}
-    </nav>
-    {category && children.length > 0 && <div className="subcategories">
-      <h2>Подкатегории</h2><CategoryGrid items={children} />
-    </div>}
-    <div className="product-grid">
-      {products.map((product) => <a className="category-card product-card" key={product.id} href={productLink(product.id)}>
-        <div className="category-cover"><Cover path={product.image_url} />
-          {product.model_url && <span className="model-tag"><Box size={14} /> 3D</span>}
-        </div>
-        <div className="category-label">
-          <div><h2>{product.title}</h2>{product.price !== undefined && <p>от {rubles.format(product.price)}</p>}</div>
-          <ArrowUpRight size={19} />
-        </div>
-      </a>)}
-    </div>
-    {products.length === 0 && <p className="empty-state">В этом разделе пока нет товаров.</p>}
-  </div>
 }
 
 function initialSelection(product: Product, query: URLSearchParams) {
@@ -194,9 +85,10 @@ function ProductPage({ product, query }: { product: Product; query: URLSearchPar
         <Viewer url={model} image={product.image_url} finishes={finishes} label={`3D-модель: ${product.title}`} />
       </Suspense>
       <section className="configuration-panel" aria-label="Комплектация">
-        <p className="eyebrow">{product.sku}</p>
+        <p className="eyebrow">{product.sku} · {path.at(-1)?.title}</p>
         <h1>{product.title}</h1>
-        {product.description && <p className="product-description">{product.description}</p>}
+        {price !== undefined && <p className="price" aria-live="polite">{rubles.format(price)}</p>}
+        {product.description && <div className="product-description"><h2>Характеристики</h2><p>{product.description}</p></div>}
         {product.options.map((option) => <fieldset key={option.id}>
           <legend>{option.label}</legend>
           <div className="option-list">
@@ -210,7 +102,6 @@ function ProductPage({ product, query }: { product: Product; query: URLSearchPar
             </label>)}
           </div>
         </fieldset>)}
-        {price !== undefined && <p className="price" aria-live="polite">{rubles.format(price)}</p>}
         <button className="button primary save" onClick={save}><Link2 size={18} /> Сохранить комплектацию</button>
         {savedLink && <div className="share">
           <label htmlFor="configuration-link">Ссылка на комплектацию</label>
@@ -227,6 +118,7 @@ function ProductPage({ product, query }: { product: Product; query: URLSearchPar
           </div>
           {copyFailed && <p role="status">Выделите ссылку и скопируйте вручную.</p>}
         </div>}
+        <a className="return-link" href={categoryLink(product.category_id)}><ArrowLeft size={16} /> Вернуться в каталог</a>
         {product.store_url && <a className="store-link" href={product.store_url}>Перейти в магазин <ArrowUpRight size={16} /></a>}
       </section>
     </div>
@@ -265,15 +157,18 @@ function App() {
   const [pathname, search] = route.split('?')
   const [page, id, extra] = pathname.split('/').slice(1)
   const product = page === 'product' && catalog.products.find((item) => item.id === id)
+  const home = !pathname || pathname === '/'
+  const category = page === 'catalog' ? catalog.categories.find((item) => item.id === id) : undefined
+  const active = home ? '' : categoryPath(category?.id ?? (product ? product.category_id : ''))[0]?.id
   let content
-  if (!pathname || pathname === '/') content = <Home />
+  if (home) content = <Showroom key="home" home />
   else if (extra !== undefined) content = <Missing />
-  else if (page === 'catalog') content = <CatalogPage id={id} />
+  else if (page === 'catalog' && (!id || category)) content = <Showroom key={id ?? 'catalog'} category={category} />
   else if (product) content = <ProductPage key={route} product={product} query={new URLSearchParams(search)} />
   else if (page === 'about' && !id) content = <About />
   else content = <Missing />
   return <>
-    <Header />
+    <Header active={active} />
     <main className="shell" ref={main} tabIndex={-1}>{content}</main>
     <footer className="shell footer"><span>Форма · демонстрационный каталог</span><a href="#/about">О проекте</a></footer>
   </>

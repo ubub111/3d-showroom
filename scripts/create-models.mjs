@@ -91,8 +91,32 @@ function dune() {
   return group
 }
 
+function medal() {
+  const group = new THREE.Group()
+  const silver = material('#9aafc0', 0.68, 0.29, 'Finish')
+  const relief = material('#4d6782', 0.54, 0.31)
+  const ribbon = material('#294571', 0.02, 0.7)
+  const stripe = material('#829bbc', 0.02, 0.63)
+  const face = new THREE.CylinderGeometry(0.72, 0.72, 0.13, 80)
+  mesh(group, face, silver, 0, 0.74).rotation.x = Math.PI / 2
+  for (const z of [-0.068, 0.068]) {
+    mesh(group, new THREE.TorusGeometry(0.64, 0.024, 10, 80), relief, 0, 0.74, z)
+    mesh(group, new THREE.TorusGeometry(0.54, 0.012, 8, 80), relief, 0, 0.74, z)
+    mesh(group, silhouette(star(6, 0.39, 0.17), 0.016, 0.012), relief, 0, 0.74, z * 1.12)
+  }
+  mesh(group, new THREE.TorusGeometry(0.14, 0.038, 12, 40), silver, 0, 1.53)
+  mesh(group, silhouette([[-0.11, 1.63], [0.12, 1.63], [0.49, 2.35], [-0.49, 2.35]], 0.048, 0.017), ribbon)
+  for (const z of [-0.025, 0.025]) {
+    for (const x of [-1, 1]) {
+      mesh(group, silhouette([[0.055 * x, 1.66], [0.095 * x, 1.66], [0.43 * x, 2.35],
+        [0.38 * x, 2.35]], 0.006, 0), stripe, 0, 0, z)
+    }
+  }
+  return group
+}
+
 const exporter = new GLTFExporter()
-const models = { facet: facet(0.28), 'facet-tall': facet(0.55), compass: compass(), polar: polar(), dune: dune() }
+const models = { facet: facet(0.28), 'facet-tall': facet(0.55), compass: compass(), polar: polar(), dune: dune(), medal: medal() }
 for (const [name, group] of Object.entries(models)) {
   const binary = await exporter.parseAsync(group, { binary: true })
   await writeFile(new URL(`../public/models/${name}.glb`, import.meta.url), Buffer.from(binary))
