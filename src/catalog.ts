@@ -55,3 +55,12 @@ export function categoryPath(id: string): Category[] {
   }
   return path
 }
+
+export function configurationLink(productId: string, selection: Record<string, string>) {
+  const params = new URLSearchParams(selection)
+  return `${productLink(productId)}${params.size ? `?${params}` : ''}`
+}
+
+export function configurationPrice(product: Product, values: OptionValue[]) {
+  return product.price === undefined ? undefined : product.price + values.reduce((sum, value) => sum + value.modifier, 0)
+}

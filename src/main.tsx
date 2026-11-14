@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronRight, Link2 } from 'lucide-react'
-import { asset, catalog, categoryLink, categoryPath, productLink, rubles, type OptionValue, type Product } from './catalog'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronRight, Link2, ListPlus } from 'lucide-react'
+import { asset, catalog, categoryLink, categoryPath, configurationLink, configurationPrice, productLink, rubles, type OptionValue, type Product } from './catalog'
 import { categories, Showroom } from './Showroom'
+import { loadSelection, persistSelection, quantityLimit, SelectionPage } from './SelectionPage'
 import './styles.css'
 
 const Viewer = lazy(() => import('./Viewer'))
-function Header({ active }: { active?: string }) {
+function Header({ active, count, selectionOpen }: { active?: string; count: number; selectionOpen: boolean }) {
   return <header className="site-header">
     <div className="shell header-inner">
       <a href="#/" className="brand" aria-label="Форма, главная"><Box size={28} strokeWidth={1.5} /><span>ФОРМА<small>3D-ШОУРУМ</small></span></a>
@@ -15,6 +16,9 @@ function Header({ active }: { active?: string }) {
         {categories.map((category) => <a key={category.id} href={categoryLink(category.id)}
           aria-current={active === category.id ? 'page' : undefined}>{category.title}</a>)}
       </nav>
+      <a className="selection-nav" href="#/selection" aria-current={selectionOpen ? 'page' : undefined}>
+        <ListPlus size={18} /> Подборка {count > 0 && <span>{count}</span>}
+      </a>
     </div>
   </header>
 }
@@ -44,7 +48,11 @@ function initialSelection(product: Product, query: URLSearchParams) {
   }))
 }
 
-function ProductPage({ product, query, returnTo }: { product: Product; query: URLSearchParams; returnTo: string }) {
+function ProductPage({ product, query, returnTo, onAdd, quantityFor }: {
+  product: Product; query: URLSearchParams; returnTo: string
+  onAdd: (href: string) => void
+  quantityFor: (href: string) => number
+}) {
   const [selection, setSelection] = useState(() => initialSelection(product, query))
   const [savedLink, setSavedLink] = useState('')
   const [copied, setCopied] = useState(false)
@@ -55,7 +63,9 @@ function ProductPage({ product, query, returnTo }: { product: Product; query: UR
   }), [product.options, selection])
   const finishes = useMemo(() => selected.filter((value) => value.color || value.roughness !== undefined || value.metalness !== undefined), [selected])
   const model = selected.findLast((value) => value.asset_url)?.asset_url ?? product.model_url
-  const price = product.price === undefined ? undefined : product.price + selected.reduce((sum, value) => sum + value.modifier, 0)
+  const price = configurationPrice(product, selected)
+  const selectionHref = configurationLink(product.id, selection)
+  const inSelection = quantityFor(selectionHref)
   const path = categoryPath(product.category_id)
 
   const select = (optionId: string, value: OptionValue) => {
@@ -65,9 +75,8 @@ function ProductPage({ product, query, returnTo }: { product: Product; query: UR
     setCopyFailed(false)
   }
   const save = () => {
-    const params = new URLSearchParams(selection)
     const url = new URL(window.location.href)
-    url.hash = `/product/${product.id}${params.size ? `?${params}` : ''}`
+    url.hash = selectionHref
     try { localStorage.setItem(`forma:${product.id}`, JSON.stringify(selection)) }
     catch { /* The configuration is still encoded in the link. */ }
     window.history.replaceState(null, '', url)
@@ -102,7 +111,12 @@ function ProductPage({ product, query, returnTo }: { product: Product; query: UR
             </label>)}
           </div>
         </fieldset>)}
-        <button className="button primary save" onClick={save}><Link2 size={18} /> Сохранить комплектацию</button>
+        <button className="button primary save" type="button" disabled={inSelection >= quantityLimit}
+          onClick={() => onAdd(selectionHref)}><ListPlus size={18} /> Добавить в подборку</button>
+        <div className="product-selection-actions">
+          <button type="button" onClick={save}><Link2 size={15} /> Сохранить комплектацию</button>
+          <span role="status">{inSelection > 0 && <a href="#/selection">В подборке {inSelection} шт.</a>}</span>
+        </div>
         {savedLink && <div className="share">
           <label htmlFor="configuration-link">Ссылка на комплектацию</label>
           <div><input id="configuration-link" readOnly value={savedLink} onFocus={(event) => event.currentTarget.select()} />
@@ -118,7 +132,7 @@ function ProductPage({ product, query, returnTo }: { product: Product; query: UR
           </div>
           {copyFailed && <p role="status">Выделите ссылку и скопируйте вручную.</p>}
         </div>}
-        <a className="return-link" href={returnTo}><ArrowLeft size={16} /> Вернуться в каталог</a>
+        <a className="return-link" href={returnTo}><ArrowLeft size={16} /> {returnTo === '#/selection' ? 'Вернуться к подборке' : 'Вернуться в каталог'}</a>
         {product.store_url && <a className="store-link" href={product.store_url}>Перейти в магазин <ArrowUpRight size={16} /></a>}
       </section>
     </div>
@@ -145,6 +159,14 @@ function About() {
 function App() {
   const [route, setRoute] = useState(window.location.hash.slice(1) || '/')
   const main = useRef<HTMLElement>(null)
+  const [lines, setLines] = useState(loadSelection)
+  useEffect(() => persistSelection(lines), [lines])
+  const addLine = (href: string) => setLines((current) => current.some((line) => line.href === href)
+    ? current.map((line) => line.href === href ? { ...line, quantity: Math.min(quantityLimit, line.quantity + 1) } : line)
+    : [...current, { href, quantity: 1 }])
+  const changeQuantity = (href: string, quantity: number) => setLines((current) =>
+    current.map((line) => line.href === href ? { ...line, quantity } : line))
+  const removeLine = (href: string) => setLines((current) => current.filter((line) => line.href !== href))
   const previousCatalog = useRef<{ route: string; product: string; scroll: number } | null>(null)
   const rememberCatalog = (product: string) => {
     if (route.startsWith('/product/')) return
@@ -176,18 +198,20 @@ function App() {
   if (home) content = <Showroom key="home" home onOpen={openProduct} />
   else if (extra !== undefined) content = <Missing />
   else if (page === 'catalog' && (!id || category)) content = <Showroom key={id ?? 'catalog'} category={category} onOpen={openProduct} />
+  else if (page === 'selection' && !id) content = <SelectionPage lines={lines} onQuantity={changeQuantity} onRemove={removeLine} />
   else if (product) content = <ProductPage key={route} product={product} query={new URLSearchParams(search)}
+    onAdd={addLine} quantityFor={(href) => lines.find((line) => line.href === href)?.quantity ?? 0}
     returnTo={previousCatalog.current?.product === product.id ? `#${previousCatalog.current.route || '/'}` : categoryLink(product.category_id)} />
   else if (page === 'about' && !id) content = <About />
   else content = <Missing />
   return <>
-    <Header active={active} />
+    <Header active={active} count={lines.length} selectionOpen={page === 'selection'} />
     <main className="shell" ref={main} tabIndex={-1} onClick={(event) => {
       if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
       const target = event.target
       if (!(target instanceof Element)) return
       const href = target.closest('a')?.getAttribute('href')
-      if (href?.startsWith('#/product/')) rememberCatalog(href.slice('#/product/'.length))
+      if (href?.startsWith('#/product/')) rememberCatalog(href.slice('#/product/'.length).split('?')[0])
     }}>{content}</main>
     <footer className="shell footer"><span>Форма · демонстрационный каталог</span><a href="#/about">О проекте</a></footer>
   </>
