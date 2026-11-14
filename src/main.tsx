@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronRight, Link2 } from 'lucide-react'
-import { asset, catalog, categoryLink, categoryPath, rubles, type OptionValue, type Product } from './catalog'
+import { asset, catalog, categoryLink, categoryPath, productLink, rubles, type OptionValue, type Product } from './catalog'
 import { categories, Showroom } from './Showroom'
 import './styles.css'
 
@@ -44,7 +44,7 @@ function initialSelection(product: Product, query: URLSearchParams) {
   }))
 }
 
-function ProductPage({ product, query }: { product: Product; query: URLSearchParams }) {
+function ProductPage({ product, query, returnTo }: { product: Product; query: URLSearchParams; returnTo: string }) {
   const [selection, setSelection] = useState(() => initialSelection(product, query))
   const [savedLink, setSavedLink] = useState('')
   const [copied, setCopied] = useState(false)
@@ -82,7 +82,7 @@ function ProductPage({ product, query }: { product: Product; query: URLSearchPar
     }))]} />
     <div className="configuration">
       <Suspense fallback={<div className="viewer-fallback"><Cover path={product.image_url} /><span>Загрузка 3D…</span></div>}>
-        <Viewer url={model} image={product.image_url} finishes={finishes} label={`3D-модель: ${product.title}`} />
+        <Viewer url={model} image={product.image_url} finishes={finishes} pinViews={product.id === 'polar'} label={`3D-модель: ${product.title}`} />
       </Suspense>
       <section className="configuration-panel" aria-label="Комплектация">
         <p className="eyebrow">{product.sku} · {path.at(-1)?.title}</p>
@@ -118,7 +118,7 @@ function ProductPage({ product, query }: { product: Product; query: URLSearchPar
           </div>
           {copyFailed && <p role="status">Выделите ссылку и скопируйте вручную.</p>}
         </div>}
-        <a className="return-link" href={categoryLink(product.category_id)}><ArrowLeft size={16} /> Вернуться в каталог</a>
+        <a className="return-link" href={returnTo}><ArrowLeft size={16} /> Вернуться в каталог</a>
         {product.store_url && <a className="store-link" href={product.store_url}>Перейти в магазин <ArrowUpRight size={16} /></a>}
       </section>
     </div>
@@ -143,13 +143,25 @@ function About() {
 }
 
 function App() {
-  const [route, setRoute] = useState(window.location.hash.slice(1))
+  const [route, setRoute] = useState(window.location.hash.slice(1) || '/')
   const main = useRef<HTMLElement>(null)
+  const previousCatalog = useRef<{ route: string; product: string; scroll: number } | null>(null)
+  const rememberCatalog = (product: string) => {
+    if (route.startsWith('/product/')) return
+    previousCatalog.current = { route, product, scroll: window.scrollY }
+  }
+  const openProduct = (product: Product) => {
+    rememberCatalog(product.id)
+    window.location.hash = productLink(product.id)
+  }
+  useLayoutEffect(() => {
+    const previous = previousCatalog.current
+    window.scrollTo(0, previous?.route === route ? previous.scroll : 0)
+  }, [route])
   useEffect(() => {
     const onHashChange = () => {
-      setRoute(window.location.hash.slice(1))
+      setRoute(window.location.hash.slice(1) || '/')
       main.current?.focus({ preventScroll: true })
-      window.scrollTo(0, 0)
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
@@ -161,15 +173,22 @@ function App() {
   const category = page === 'catalog' ? catalog.categories.find((item) => item.id === id) : undefined
   const active = home ? '' : categoryPath(category?.id ?? (product ? product.category_id : ''))[0]?.id
   let content
-  if (home) content = <Showroom key="home" home />
+  if (home) content = <Showroom key="home" home onOpen={openProduct} />
   else if (extra !== undefined) content = <Missing />
-  else if (page === 'catalog' && (!id || category)) content = <Showroom key={id ?? 'catalog'} category={category} />
-  else if (product) content = <ProductPage key={route} product={product} query={new URLSearchParams(search)} />
+  else if (page === 'catalog' && (!id || category)) content = <Showroom key={id ?? 'catalog'} category={category} onOpen={openProduct} />
+  else if (product) content = <ProductPage key={route} product={product} query={new URLSearchParams(search)}
+    returnTo={previousCatalog.current?.product === product.id ? `#${previousCatalog.current.route || '/'}` : categoryLink(product.category_id)} />
   else if (page === 'about' && !id) content = <About />
   else content = <Missing />
   return <>
     <Header active={active} />
-    <main className="shell" ref={main} tabIndex={-1}>{content}</main>
+    <main className="shell" ref={main} tabIndex={-1} onClick={(event) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const href = target.closest('a')?.getAttribute('href')
+      if (href?.startsWith('#/product/')) rememberCatalog(href.slice('#/product/'.length))
+    }}>{content}</main>
     <footer className="shell footer"><span>Форма · демонстрационный каталог</span><a href="#/about">О проекте</a></footer>
   </>
 }

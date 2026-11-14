@@ -181,3 +181,25 @@ legend { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+.pin-showcase {
+  height: clamp(350px, 38vw, 480px);
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 50% 29%, #fffdfa 0%, #eae6db 64%, #ded8cb 100%);
+  touch-action: pan-y;
+  cursor: grab;
+}
+.pin-showcase:active { cursor: grabbing; }
+.pin-showcase canvas { touch-action: pan-y !important; }
+.pin-scene-caption { position: absolute; inset: auto 12px 15px; text-align: center; color: var(--muted); font-size: 12px; pointer-events: none; }
+.pin-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 195px), 1fr)); gap: 8px; margin-top: 10px; }
+.pin-links a { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; background: white; font-size: 13px; font-weight: 700; }
+.pin-links a:hover { border-color: var(--blue); color: var(--blue); }
+.pin-angles { position: absolute; inset: auto 12px 12px; display: flex; gap: 5px; flex-wrap: wrap; }
+.pin-angles button { border: 1px solid #d6d7cb; border-radius: 6px; padding: 7px 9px; background: #fbfaf3; font-size: 12px; font-weight: 600; }
+.pin-angles button:hover, .pin-angles button[aria-pressed="true"] { background: #eaf0ff; border-color: var(--blue); }
+@media (max-width: 730px) {
+  .pin-showcase { height: clamp(255px, 70vw, 365px); }
+}

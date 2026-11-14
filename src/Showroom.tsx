@@ -1,8 +1,9 @@
-import { lazy, Suspense, useCallback, useRef, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { ArrowRight, ArrowUpRight, Box, ChevronLeft, ChevronRight, LayoutList, PanelsTopLeft } from 'lucide-react'
 import { catalog, categoryLink, categoryPath, productLink, rubles, type Category, type Product } from './catalog'
 import type { PreviewEntry } from './CatalogModels'
 
+const PinShowcase = lazy(() => import('./PinShowcase'))
 const CatalogModels = lazy(() => import('./CatalogModels'))
 export const categories = catalog.categories.filter((category) => !category.parent_id)
 const catalogLink = '#/catalog'
@@ -52,11 +53,14 @@ function ModelSlot({ item, turn, register, prefix }: { item: Item; turn: number;
   </div>
 }
 
-function Carousel({ items, label, register }: { items: Item[]; label: string; register: Register }) {
-  const [active, setActive] = useState(0)
+const carouselPositions = new Map<string, string>()
+
+function Carousel({ items, label, register, section }: { items: Item[]; label: string; register: Register; section: string }) {
+  const [active, setActive] = useState(() => Math.max(0, items.findIndex((item) => item.id === carouselPositions.get(section))))
   const position = useRef<{ x: number; y: number } | null>(null)
   const ignoreClick = useRef(false)
   const end = items.length - 1
+  useEffect(() => { carouselPositions.set(section, items[active].id) }, [section, items, active])
   const move = (delta: number) => setActive((index) => Math.min(end, Math.max(0, index + delta)))
   return <div className="carousel" role="group" aria-label={label} tabIndex={0}
     onKeyDown={(event) => {
@@ -145,7 +149,7 @@ function Subcategories({ items }: { items: Category[] }) {
   </section>
 }
 
-export function Showroom({ category, home = false }: { category?: Category; home?: boolean }) {
+export function Showroom({ category, home = false, onOpen }: { category?: Category; home?: boolean; onOpen: (product: Product) => void }) {
   const { entries, register } = usePreviews()
   const [vertical, setVertical] = useState(() => {
     try { return sessionStorage.getItem('forma:layout') === 'vertical' }
@@ -156,8 +160,11 @@ export function Showroom({ category, home = false }: { category?: Category; home
     try { sessionStorage.setItem('forma:layout', value ? 'vertical' : 'horizontal') }
     catch { /* Layout can still be changed for the current page. */ }
   }
-  const items = home ? categories.map((item) => categoryItem(item)) : catalog.products
-    .filter((product) => !category || product.category_id === category.id).map(productItem)
+  const products = catalog.products.filter((product) => !category || product.category_id === category.id)
+  const showcase = category?.id === 'pins' && !vertical
+  const featured = showcase ? products.filter((product) => product.model_url).slice(0, 3) : []
+  const hasShowcase = featured.length > 0
+  const items = home ? categories.map((item) => categoryItem(item)) : products.map(productItem)
   const descendants = catalog.categories.filter((item) => category ? item.parent_id === category.id : item.parent_id)
   const path = category ? categoryPath(category.id).slice(0, -1) : []
   const label = home ? 'Слайдер категорий' : 'Слайдер товаров'
@@ -171,11 +178,21 @@ export function Showroom({ category, home = false }: { category?: Category; home
         {category?.description && <p>{category.description}</p>}
       </div>
       <div className="layout-toggle" role="group" aria-label="Вид каталога">
-        <button aria-pressed={!vertical} onClick={() => setLayout(false)}><PanelsTopLeft size={16} /> Карусель</button>
+        <button aria-pressed={!vertical} onClick={() => setLayout(false)}><PanelsTopLeft size={16} /> {category?.id === 'pins' ? '3D-витрина' : 'Карусель'}</button>
         <button aria-pressed={vertical} onClick={() => setLayout(true)}><LayoutList size={16} /> Список</button>
       </div>
     </div>
-    {items.length ? vertical ? <Vertical items={items} register={register} /> : <Carousel items={items} label={label} register={register} /> :
+    {hasShowcase ? <>
+      <Suspense fallback={<div className="pin-showcase" role="status">Загрузка 3D…</div>}>
+        <PinShowcase products={featured} onOpen={onOpen} />
+      </Suspense>
+      <div className="pin-links" aria-label="Изделия в разделе">
+        {products.map((product) => <a key={product.id} href={productLink(product.id)}>
+          {product.title}<ArrowUpRight size={16} />
+        </a>)}
+      </div>
+    </> : items.length ? vertical ? <Vertical items={items} register={register} /> :
+      <Carousel items={items} label={label} register={register} section={home ? 'home' : category?.id ?? 'catalog'} /> :
       <p className="empty-state">В этом разделе пока нет изделий.</p>}
     {home && !vertical && <ModelStrip items={items} register={register} />}
     {entries.length > 0 && <Suspense fallback={null}><CatalogModels entries={entries} /></Suspense>}

@@ -68,13 +68,41 @@ function compass() {
   return group
 }
 
-function polar() {
+function lapelPin(outline, inset, color, relief) {
   const group = new THREE.Group()
   const gold = material('#c89954', 0.74)
-  const enamel = material('#263e73', 0.15, 0.25, 'Finish')
-  mesh(group, silhouette(star(8, 0.93, 0.53), 0.11, 0.028), gold, 0, 0.97)
-  mesh(group, silhouette(star(8, 0.86, 0.47), 0.02, 0.012), enamel, 0, 0.97, 0.077)
-  mesh(group, new THREE.BoxGeometry(0.64, 0.10, 0.08), gold, 0, 0.97, -0.12)
+  const enamel = material(color, 0.15, 0.23, 'Finish')
+  const clasp = material('#824d21', 0.72)
+  mesh(group, silhouette(outline, 0.09, 0.024), gold)
+  mesh(group, silhouette(inset, 0.022, 0.012), enamel, 0, 0, 0.061)
+  mesh(group, silhouette(relief, 0.013, 0.008), gold, 0, 0, 0.083)
+  mesh(group, new THREE.CylinderGeometry(0.064, 0.064, 0.19, 24), clasp, 0, 0.06, -0.132).rotation.x = Math.PI / 2
+  mesh(group, new THREE.CylinderGeometry(0.22, 0.27, 0.083, 40), clasp, 0, 0.06, -0.251).rotation.x = Math.PI / 2
+  const tab = new THREE.BoxGeometry(0.12, 0.19, 0.06)
+  for (const x of [-0.14, 0.14]) mesh(group, tab, clasp, x, 0.06, -0.295)
+  return group
+}
+
+function polar() {
+  return lapelPin(star(8, 0.93, 0.53), star(8, 0.85, 0.48), '#263e73', star(4, 0.21, 0.063))
+}
+
+function horizon() {
+  const shield = [[-0.74, 0.69], [0.74, 0.69], [0.66, -0.26], [0.43, -0.59], [0, -0.91], [-0.43, -0.59], [-0.66, -0.26]]
+  return lapelPin(shield, shield.map(([x, y]) => [x * 0.9, y * 0.9]), '#26534a',
+    [[-0.49, -0.2], [-0.1, 0.35], [0.14, 0.02], [0.27, 0.2], [0.51, -0.2], [0.25, -0.2], [-0.1, 0.12], [-0.32, -0.2]])
+}
+
+function orbit() {
+  const circle = Array.from({ length: 64 }, (_, i) => {
+    const angle = i * Math.PI / 32
+    return [0.82 * Math.cos(angle), 0.82 * Math.sin(angle)]
+  })
+  const group = lapelPin(circle, circle.map(([x, y]) => [x * 0.91, y * 0.91]), '#963e50', star(4, 0.22, 0.065))
+  const gold = material('#c89954', 0.74)
+  const ring = mesh(group, new THREE.TorusGeometry(0.48, 0.024, 10, 56), gold, 0, 0, 0.092)
+  ring.scale.set(1.15, 0.58, 1)
+  ring.rotation.z = 0.55
   return group
 }
 
@@ -116,7 +144,7 @@ function medal() {
 }
 
 const exporter = new GLTFExporter()
-const models = { facet: facet(0.28), 'facet-tall': facet(0.55), compass: compass(), polar: polar(), dune: dune(), medal: medal() }
+const models = { facet: facet(0.28), 'facet-tall': facet(0.55), compass: compass(), polar: polar(), horizon: horizon(), orbit: orbit(), dune: dune(), medal: medal() }
 for (const [name, group] of Object.entries(models)) {
   const binary = await exporter.parseAsync(group, { binary: true })
   await writeFile(new URL(`../public/models/${name}.glb`, import.meta.url), Buffer.from(binary))

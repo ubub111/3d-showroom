@@ -6,6 +6,13 @@ import { Box, Minus, Plus, RotateCcw, Rotate3D } from 'lucide-react'
 import { asset, type OptionValue } from './catalog'
 import { Model, StudioEnvironment, ViewerBoundary } from './scene'
 
+const pinAngles = [
+  { label: 'Спереди', position: [0, 1.24, 5.32], zoom: 1.05 },
+  { label: 'С ребра', position: [5.18, 1.46, 0.15], zoom: 1.12 },
+  { label: 'Крепление', position: [1.86, 2.06, -4.66], zoom: 1.4 },
+  { label: 'Эмаль крупно', position: [1.23, 1.58, 4.96], zoom: 1.63 },
+] as const
+
 function Studio() {
   return <>
     <StudioEnvironment />
@@ -25,16 +32,28 @@ function Fallback({ image, message }: { image?: string; message: string }) {
   </div>
 }
 
-export default function Viewer({ url, image, finishes, label }: {
-  url?: string; image?: string; finishes: OptionValue[]; label: string
+export default function Viewer({ url, image, finishes, label, pinViews = false }: {
+  url?: string; image?: string; finishes: OptionValue[]; label: string; pinViews?: boolean
 }) {
   const controls = useRef<OrbitControlsType>(null)
   const [zoom, setZoom] = useState(1)
   const [spin, setSpin] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const [angle, setAngle] = useState<string>()
+  const chooseAngle = ({ position, label, zoom }: typeof pinAngles[number]) => {
+    const orbit = controls.current
+    if (!orbit) return
+    orbit.object.position.set(position[0], position[1], position[2])
+    orbit.autoRotate = false
+    orbit.update()
+    setSpin(false)
+    setZoom(zoom)
+    setAngle(label)
+  }
   const changeZoom = (step: number) => setZoom((value) => Math.max(0.75, Math.min(1.75, value + step)))
   const reset = () => {
     controls.current?.reset()
     setZoom(1)
+    setAngle(undefined)
     setSpin(false)
   }
   if (!url) return <Fallback image={image} message="3D-модель пока недоступна" />
@@ -49,15 +68,18 @@ export default function Viewer({ url, image, finishes, label }: {
         <Studio />
         <Suspense fallback={null}><Model url={url} finishes={finishes} /></Suspense>
         <OrbitControls ref={controls} target={[0, 1.02, 0]} enablePan={false} autoRotate={spin}
-          autoRotateSpeed={0.85} minDistance={2.7} maxDistance={9} maxPolarAngle={Math.PI * 0.49} />
+          onStart={() => setAngle(undefined)} autoRotateSpeed={0.85} minDistance={2.7} maxDistance={9} maxPolarAngle={Math.PI * 0.49} />
       </Canvas>
       <div className="viewer-toolbar" aria-label="Управление 3D">
-        <button type="button" aria-label="Вращать автоматически" title="Автовращение" aria-pressed={spin} onClick={() => setSpin(!spin)}><Rotate3D size={18} /></button>
+        <button type="button" aria-label="Вращать автоматически" title="Автовращение" aria-pressed={spin} onClick={() => { setSpin(!spin); setAngle(undefined) }}><Rotate3D size={18} /></button>
         <button type="button" aria-label="Приблизить" title="Приблизить" onClick={() => changeZoom(0.25)}><Plus size={18} /></button>
         <button type="button" aria-label="Отдалить" title="Отдалить" onClick={() => changeZoom(-0.25)}><Minus size={18} /></button>
         <button type="button" aria-label="Сбросить ракурс" title="Сбросить ракурс" onClick={reset}><RotateCcw size={17} /></button>
       </div>
-      <p className="viewer-hint">Перетаскивайте для вращения · прокручивайте для масштаба</p>
+      {pinViews ? <div className="pin-angles" role="group" aria-label="Ракурсы значка">
+        {pinAngles.map((view) => <button key={view.label} type="button" aria-pressed={angle === view.label}
+          onClick={() => chooseAngle(view)}>{view.label}</button>)}
+      </div> : <p className="viewer-hint">Перетаскивайте для вращения · прокручивайте для масштаба</p>}
     </div>
   </ViewerBoundary>
 }

@@ -1,6 +1,8 @@
 id,category_id,title,sku,price,model_url,image_url,sort_order,store_url,description
 facet,awards,Награда «Грань»,AW-001,4900,/models/facet.glb,/images/awards.webp,10,,Гранёная награда на тёмном основании. Выберите отделку и высоту подставки.
 compass,tokens,Жетон «Компас»,TK-001,1200,/models/compass.glb,/images/tokens.webp,10,,Рельефный металлический жетон с лучами компаса и фактурной кромкой.
-polar,pins,Значок «Полюс»,PN-001,690,/models/polar.glb,/images/pins.webp,10,,Восьмиконечная звезда с эмалевым центром и металлической окантовкой.
+polar,pins,Значок «Полюс»,PN-001,690,/models/polar.glb,/images/pins.webp,10,,Восьмиконечная звезда с эмалевым центром. Металлическая окантовка и застёжка-бабочка.
 dune,mugs,Кружка «Дюна»,MG-001,1450,/models/dune.glb,/images/mugs.webp,10,,Керамическая кружка с округлой ручкой. Можно выбрать оттенок глазури.
 medal,medals,Медаль «Север»,AW-002,1800,/models/medal.glb,/images/tokens.webp,10,,Памятная медаль из демонстрационного каталога.
+horizon,pins,Значок «Горизонт»,PN-002,730,/models/horizon.glb,,20,,Щит с силуэтом гор и рельефной металлической окантовкой.
+orbit,pins,Значок «Орбита»,PN-003,760,/models/orbit.glb,,30,,Круглый эмалевый значок с рельефной орбитой и застёжкой-бабочкой.

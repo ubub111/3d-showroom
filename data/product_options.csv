@@ -12,3 +12,7 @@ dune,finish,Глазурь,ivory,Слоновая кость,0,,#f2e4cb,Finish,0
 dune,finish,Глазурь,rose,Пыльная роза,100,,#b97f78,Finish,0.25,0.04
 medal,finish,Металл,silver,Серебристый,0,,#9aafc0,Finish,0.29,0.68
 medal,finish,Металл,bronze,Бронза,300,,#b7804e,Finish,0.32,0.67
+horizon,finish,Эмаль,forest,Хвойный,0,,#26534a,Finish,0.23,0.15
+horizon,finish,Эмаль,navy,Тёмно-синий,100,,#263e73,Finish,0.24,0.15
+orbit,finish,Эмаль,berry,Ягодный,0,,#963e50,Finish,0.24,0.15
+orbit,finish,Эмаль,ivory,Слоновая кость,100,,#e6dbc1,Finish,0.25,0.15
