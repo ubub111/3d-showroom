@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { ArrowRight, ArrowUpRight, Box, ChevronLeft, ChevronRight, LayoutList, PanelsTopLeft } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Box, Eye, ChevronLeft, ChevronRight, LayoutList, PanelsTopLeft } from 'lucide-react'
 import { catalog, categoryLink, categoryPath, productLink, rubles, type Category, type Product } from './catalog'
 import type { PreviewEntry } from './CatalogModels'
+import { ProductThumb } from './StorePanels'
 
 const PinShowcase = lazy(() => import('./PinShowcase'))
 const CatalogModels = lazy(() => import('./CatalogModels'))
@@ -97,7 +98,7 @@ function Carousel({ items, label, register, section }: { items: Item[]; label: s
           {item.detail && <p className="slide-detail">{item.detail}</p>}
           <h2>{item.title}</h2>
           {item.description && <p className="slide-description">{item.description}</p>}
-          <span className="slide-action" aria-hidden="true">Открыть <ChevronRight size={15} /></span>
+          <span className="slide-action" aria-hidden="true">{section === 'home' ? 'Смотреть товары' : 'Открыть'} <ChevronRight size={15} /></span>
         </div>
       </article>)}
     </div>
@@ -132,6 +133,22 @@ function ModelStrip({ items, register }: { items: Item[]; register: Register }) 
   </section>
 }
 
+function ProductRows({ sections, onPreview }: { sections: Category[]; onPreview: (product: Product) => void }) {
+  return <div className="store-shelves">{sections.map((section) => {
+    const products = catalog.products.filter((product) => categoryPath(product.category_id).some(({ id }) => id === section.id))
+    if (!products.length) return null
+    return <section className="store-shelf" key={section.id}>
+      <header><h2><a href={categoryLink(section.id)}>{section.title} <ChevronRight size={18} /></a></h2>
+        <a href={categoryLink(section.id)} aria-label={`Все товары раздела ${section.title}`}>Все · {products.length}</a></header>
+      <ul>{products.map((product) => <li key={product.id}>
+        <a href={productLink(product.id)}><span className="shelf-photo"><ProductThumb product={product} /></span>
+          <strong>{product.title}</strong>{product.price !== undefined && <small>от {rubles.format(product.price)}</small>}</a>
+        <button type="button" className="quick-preview" aria-label={`Быстрый просмотр: ${product.title}`} onClick={() => onPreview(product)}><Eye size={17} /></button>
+      </li>)}</ul>
+    </section>
+  })}</div>
+}
+
 function Subcategories({ items }: { items: Category[] }) {
   if (!items.length) return null
   return <section className="subcategories">
@@ -149,7 +166,7 @@ function Subcategories({ items }: { items: Category[] }) {
   </section>
 }
 
-export function Showroom({ category, home = false, onOpen }: { category?: Category; home?: boolean; onOpen: (product: Product) => void }) {
+export function Showroom({ category, home = false, onOpen, onPreview }: { category?: Category; home?: boolean; onOpen: (product: Product) => void; onPreview: (product: Product) => void }) {
   const { entries, register } = usePreviews()
   const [vertical, setVertical] = useState(() => {
     try { return sessionStorage.getItem('forma:layout') === 'vertical' }
@@ -168,19 +185,20 @@ export function Showroom({ category, home = false, onOpen }: { category?: Catego
   const descendants = catalog.categories.filter((item) => category ? item.parent_id === category.id : item.parent_id)
   const path = category ? categoryPath(category.id).slice(0, -1) : []
   const label = home ? 'Слайдер категорий' : 'Слайдер товаров'
+  const layoutToggle = <div className="layout-toggle" role="group" aria-label="Вид каталога">
+        <button aria-pressed={!vertical} onClick={() => setLayout(false)}><PanelsTopLeft size={16} /> {category?.id === 'pins' ? '3D-витрина' : 'Карусель'}</button>
+        <button aria-pressed={vertical} onClick={() => setLayout(true)}><LayoutList size={16} /> Список</button>
+      </div>
   return <div className="showroom-page">
     {path.length > 0 && <nav className="breadcrumbs" aria-label="Путь к разделу">
       <a href="#/">Главная</a>
       {path.map((item) => <span key={item.id}><ChevronRight size={13} /><a href={categoryLink(item.id)}>{item.title}</a></span>)}
     </nav>}
-    <div className="showroom-heading">
-      <div><h1>{home ? '3D-шоурум' : category?.title ?? 'Все изделия'}</h1>
+    <div className={home ? 'showroom-heading home-heading' : 'showroom-heading'}>
+      <div className={home ? 'sr-only' : undefined}><h1>{home ? '3D-шоурум' : category?.title ?? 'Все изделия'}</h1>
         {category?.description && <p>{category.description}</p>}
       </div>
-      <div className="layout-toggle" role="group" aria-label="Вид каталога">
-        <button aria-pressed={!vertical} onClick={() => setLayout(false)}><PanelsTopLeft size={16} /> {category?.id === 'pins' ? '3D-витрина' : 'Карусель'}</button>
-        <button aria-pressed={vertical} onClick={() => setLayout(true)}><LayoutList size={16} /> Список</button>
-      </div>
+      {!home && layoutToggle}
     </div>
     {hasShowcase ? <>
       <Suspense fallback={<div className="pin-showcase" role="status">Загрузка 3D…</div>}>
@@ -194,8 +212,10 @@ export function Showroom({ category, home = false, onOpen }: { category?: Catego
     </> : items.length ? vertical ? <Vertical items={items} register={register} /> :
       <Carousel items={items} label={label} register={register} section={home ? 'home' : category?.id ?? 'catalog'} /> :
       <p className="empty-state">В этом разделе пока нет изделий.</p>}
-    {home && !vertical && <ModelStrip items={items} register={register} />}
+    {home && <div className="home-view-controls">{layoutToggle}</div>}
     {entries.length > 0 && <Suspense fallback={null}><CatalogModels entries={entries} /></Suspense>}
+    {home && <ProductRows sections={categories} onPreview={onPreview} />}
+    {home && !vertical && <ModelStrip items={items} register={register} />}
     <Subcategories items={descendants} />
     {home && <a className="all-link" href={catalogLink}>Все изделия <ArrowRight size={16} /></a>}
   </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowUpRight, Clipboard, ListPlus, Minus, Plus, Trash2 } from 'lucide-react'
-import { catalog, configurationPrice, rubles } from './catalog'
+import { CheckoutForm } from './StorePanels'
+import { catalog, configurationPrice, rubles, volumeDiscount } from './catalog'
 
 export type SelectionLine = { href: string; quantity: number }
 const storageKey = 'forma:selection:v1'
@@ -40,7 +41,7 @@ function describeLine(line: SelectionLine): SelectionLine & {
   return { ...line, available: true, title: product.title, sku: product.sku, price, details }
 }
 
-function Quantity({ value, label, onChange }: { value: number; label: string; onChange: (value: number) => void }) {
+export function Quantity({ value, label, onChange }: { value: number; label: string; onChange: (value: number) => void }) {
   const [draft, setDraft] = useState(String(value))
   useEffect(() => setDraft(String(value)), [value])
   const commit = () => {
@@ -60,16 +61,20 @@ function Quantity({ value, label, onChange }: { value: number; label: string; on
   </div>
 }
 
-export function SelectionPage({ lines, onQuantity, onRemove }: {
+export function SelectionPage({ lines, onQuantity, onRemove, drawer = false }: {
   lines: SelectionLine[]
+  drawer?: boolean
   onQuantity: (href: string, quantity: number) => void
   onRemove: (href: string) => void
 }) {
+  const [checkout, setCheckout] = useState(false)
   const [showText, setShowText] = useState(false)
   const [copyStatus, setCopyStatus] = useState('')
   const items = lines.map(describeLine)
-  const total = items.reduce((sum, line) => sum + (line.price ?? 0) * line.quantity, 0)
+  const subtotal = items.reduce((sum, line) => sum + (line.price ?? 0) * line.quantity, 0)
   const quantity = items.reduce((sum, line) => sum + line.quantity, 0)
+  const discount = volumeDiscount(quantity, subtotal)
+  const total = subtotal - discount.amount
   const complete = items.every((line) => line.price !== undefined)
   const totalLabel = complete ? 'Ориентировочная сумма' : 'Изделия с указанной ценой'
   const copyText = ['Подборка для расчёта тиража', '', ...items.flatMap((line) => [
@@ -77,12 +82,17 @@ export function SelectionPage({ lines, onQuantity, onRemove }: {
     ...(line.details ? [line.details] : []),
     ...(line.available ? [new URL(line.href, location.href).href] : ['Комплектация больше недоступна']),
     '',
-  ]), `${totalLabel}: ${rubles.format(total)}`].join('\n')
-  return <div className="inner-page selection-page">
-    <a className="return-link selection-back" href="#/catalog"><ArrowLeft size={16} /> В каталог</a>
+  ]), ...(discount.percent ? [`Скидка за тираж ${discount.percent}%: −${rubles.format(discount.amount)}`] : []), `${totalLabel}: ${rubles.format(total)}`].join('\n')
+  if (checkout && items.length) return <div className={drawer ? '' : 'inner-page'}>
+    <h2 className="checkout-heading">Оформление заказа</h2>
+    <p className="checkout-total">{totalLabel} · {rubles.format(total)}</p>
+    <CheckoutForm summary={copyText} onCancel={() => setCheckout(false)} />
+  </div>
+  return <div className={drawer ? 'selection-page drawer-selection' : 'inner-page selection-page'}>
+    {!drawer && <><a className="return-link selection-back" href="#/catalog"><ArrowLeft size={16} /> В каталог</a>
     <div className="page-heading"><h1>Подборка</h1>
       <p>Укажите тираж и скопируйте список с выбранными комплектациями.</p>
-    </div>
+    </div></>}
     {items.length ? <div className="selection-layout">
       <ul className="selection-list">
         {items.map((line) => <li className="selection-line" key={line.href}>
@@ -104,8 +114,13 @@ export function SelectionPage({ lines, onQuantity, onRemove }: {
       </ul>
       <aside className="selection-summary" aria-label="Итоги подборки">
         <span>{items.length} поз. · {quantity} шт.</span>
+        {discount.percent > 0 && <dl className="discount-summary">
+          <div><dt>Сумма без скидки</dt><dd>{rubles.format(subtotal)}</dd></div>
+          <div><dt>Скидка за тираж {discount.percent}%</dt><dd>−{rubles.format(discount.amount)}</dd></div>
+        </dl>}
         <p>{totalLabel}</p><strong aria-live="polite">{rubles.format(total)}</strong>
-        <button className="button primary" type="button" onClick={async () => {
+        <button className="button primary" type="button" onClick={() => setCheckout(true)}>Оформить заказ</button>
+        <button className="button secondary" type="button" onClick={async () => {
           try {
             await navigator.clipboard.writeText(copyText)
             setCopyStatus('Подборка скопирована')

@@ -64,3 +64,15 @@ export function configurationLink(productId: string, selection: Record<string, s
 export function configurationPrice(product: Product, values: OptionValue[]) {
   return product.price === undefined ? undefined : product.price + values.reduce((sum, value) => sum + value.modifier, 0)
 }
+
+export const volumeTiers = [
+  { quantity: 10, percent: 5 },
+  { quantity: 50, percent: 10 },
+  { quantity: 100, percent: 15 },
+  { quantity: 300, percent: 20 },
+]
+
+export function volumeDiscount(quantity: number, subtotal: number) {
+  const percent = volumeTiers.findLast((tier) => quantity >= tier.quantity)?.percent ?? 0
+  return { percent, amount: Math.round(subtotal * percent / 100) }
+}
