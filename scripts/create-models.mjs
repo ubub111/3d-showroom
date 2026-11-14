@@ -92,7 +92,7 @@ function facet(baseHeight) {
   const brass = material('#c89954', 0.75)
   mesh(group, beveledBlock(2.08, baseHeight, 0.91, 0.025), dark, 0, baseHeight / 2)
   mesh(group, beveledBlock(1.94, 0.12, 0.8, 0.016), dark, 0, baseHeight + 0.045)
-  mesh(group, beveledBlock(0.92, 0.135, 0.018, 0.006), brass, 0, baseHeight / 2, 0.463)
+  mesh(group, beveledBlock(0.92, 0.135, 0.018, 0.006), brass, 0, baseHeight / 2, 0.463).name = 'EngravingPlate'
   const outline = [[-0.6, 0], [0.6, 0], [1.04, 0.75], [0.7, 1.61], [0, 1.92], [-0.7, 1.61], [-1.04, 0.75]]
   mesh(group, silhouette(outline, 0.17, 0.15), body, 0, baseHeight + 0.18)
   const etching = material('#edc086', 0.72, 0.35)
@@ -106,12 +106,23 @@ function facet(baseHeight) {
 function compass() {
   const group = new THREE.Group()
   const finish = material('#b78b4a', 0.75, 0.25, 'Finish')
-  const relief = material('#7f5b2c', 0.65)
-  const polished = material('#cc9e56', 0.76, 0.21)
-  mesh(group, new THREE.LatheGeometry([[0, -0.08], [0.877, -0.08], [0.906, -0.066], [0.91, -0.053], [0.91, 0.053], [0.906, 0.066], [0.877, 0.08], [0, 0.08]].map(([x, y]) => new THREE.Vector2(x, y)), 112), finish, 0, 0.92).rotation.x = Math.PI / 2
+  const relief = material('#7f5b2c', 0.72, 0.32, 'Finish_recess')
+  const polished = material('#cc9e56', 0.87, 0.18, 'Finish_polished')
+  const blank = new THREE.LatheGeometry([[0, -0.08], [0.877, -0.08], [0.906, -0.066], [0.91, -0.053], [0.91, 0.053], [0.906, 0.066], [0.877, 0.08], [0, 0.08]].map(([x, y]) => new THREE.Vector2(x, y)), 144)
+  const vertices = blank.attributes.position
+  const colors = []
+  for (let index = 0; index < vertices.count; index++) {
+    const x = vertices.getX(index)
+    const z = vertices.getZ(index)
+    const grain = 0.965 + 0.035 * Math.sin(Math.hypot(x, z) * 263) * Math.sin(x * 137 + z * 71)
+    colors.push(grain, grain, grain)
+  }
+  blank.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+  finish.vertexColors = true
+  mesh(group, blank, finish, 0, 0.92).rotation.x = Math.PI / 2
   for (const z of [-0.085, 0.085]) {
     for (const radius of [0.83, 0.68]) {
-      mesh(group, new THREE.TorusGeometry(radius, 0.018, 12, 96), relief, 0, 0.92, z)
+      mesh(group, new THREE.TorusGeometry(radius, 0.018, 12, 120), polished, 0, 0.92, z)
     }
     compassRelief(group, z, polished, relief)
   }

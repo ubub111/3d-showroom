@@ -56,8 +56,9 @@ export function categoryPath(id: string): Category[] {
   return path
 }
 
-export function configurationLink(productId: string, selection: Record<string, string>) {
+export function configurationLink(productId: string, selection: Record<string, string>, engraving = '') {
   const params = new URLSearchParams(selection)
+  if (productId === 'facet' && engraving) params.set('engraving', engraving)
   return `${productLink(productId)}${params.size ? `?${params}` : ''}`
 }
 
@@ -75,4 +76,10 @@ export const volumeTiers = [
 export function volumeDiscount(quantity: number, subtotal: number) {
   const percent = volumeTiers.findLast((tier) => quantity >= tier.quantity)?.percent ?? 0
   return { percent, amount: Math.round(subtotal * percent / 100) }
+}
+
+export const engravingLimit = 38
+
+export function engravingText(value: unknown) {
+  return typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, engravingLimit).trim() : ''
 }

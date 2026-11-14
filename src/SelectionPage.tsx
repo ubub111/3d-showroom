@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowUpRight, Clipboard, ListPlus, Minus, Plus, Trash2 } from 'lucide-react'
 import { CheckoutForm } from './StorePanels'
-import { catalog, configurationPrice, rubles, volumeDiscount } from './catalog'
+import { catalog, configurationPrice, engravingText, rubles, volumeDiscount } from './catalog'
 
 export type SelectionLine = { href: string; quantity: number }
 const storageKey = 'forma:selection:v1'
@@ -37,8 +37,10 @@ function describeLine(line: SelectionLine): SelectionLine & {
     return { ...line, title: product.title, available: false }
   }
   const price = configurationPrice(product, choices.map(({ value }) => value))
-  const details = choices.map(({ option, value }) => `${option.label}: ${value.value_label}`).join(' · ')
-  return { ...line, available: true, title: product.title, sku: product.sku, price, details }
+  const details = choices.map(({ option, value }) => `${option.label}: ${value.value_label}`)
+  const engraving = product.id === 'facet' && engravingText(params.get('engraving'))
+  if (engraving) details.push(`Надпись «${engraving}»`)
+  return { ...line, available: true, title: product.title, sku: product.sku, price, details: details.join(' · ') }
 }
 
 export function Quantity({ value, label, onChange }: { value: number; label: string; onChange: (value: number) => void }) {

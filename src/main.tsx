@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronRight, Link2, Search, ShoppingBag } from 'lucide-react'
-import { asset, catalog, categoryLink, categoryPath, configurationLink, configurationPrice, productLink, rubles, volumeDiscount, volumeTiers, type OptionValue, type Product } from './catalog'
+import { asset, catalog, categoryLink, categoryPath, configurationLink, configurationPrice, engravingLimit, engravingText, productLink, rubles, volumeDiscount, volumeTiers, type OptionValue, type Product } from './catalog'
 import { categories, Showroom } from './Showroom'
 import { loadSelection, persistSelection, Quantity, quantityLimit, SelectionPage } from './SelectionPage'
 import { ProductThumb, StoreDialog, StoreSearch } from './StorePanels'
@@ -62,6 +62,13 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
   quantityFor: (href: string) => number
 }) {
   const [selection, setSelection] = useState(() => initialSelection(product, query))
+  const [engraving, setEngraving] = useState(() => {
+    if (product.id !== 'facet') return ''
+    if (query.size) return engravingText(query.get('engraving'))
+    try { return engravingText(JSON.parse(localStorage.getItem(`forma:${product.id}`) ?? '{}')?.engraving) }
+    catch { return '' }
+  })
+  const textOnPlate = engravingText(engraving)
   const [gallery, setGallery] = useState<'model' | 'photo'>('model')
   const [quantity, setQuantity] = useState(1)
   const [savedLink, setSavedLink] = useState('')
@@ -74,7 +81,7 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
   const finishes = useMemo(() => selected.filter((value) => value.color || value.roughness !== undefined || value.metalness !== undefined), [selected])
   const model = selected.findLast((value) => value.asset_url)?.asset_url ?? product.model_url
   const price = configurationPrice(product, selected)
-  const selectionHref = configurationLink(product.id, selection)
+  const selectionHref = configurationLink(product.id, selection, textOnPlate)
   const inSelection = quantityFor(selectionHref)
   const path = categoryPath(product.category_id)
 
@@ -87,7 +94,7 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
   const save = () => {
     const url = new URL(window.location.href)
     url.hash = selectionHref
-    try { localStorage.setItem(`forma:${product.id}`, JSON.stringify(selection)) }
+    try { localStorage.setItem(`forma:${product.id}`, JSON.stringify(textOnPlate ? { ...selection, engraving: textOnPlate } : selection)) }
     catch { /* The configuration is still encoded in the link. */ }
     window.history.replaceState(null, '', url)
     setSavedLink(url.href)
@@ -103,7 +110,7 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
       <div className="product-gallery">
         {gallery === 'photo' && product.image_url ? <div className="viewer-fallback"><img src={asset(product.image_url)} alt={product.title} /></div> :
           <Suspense fallback={<div className="viewer-fallback"><Cover path={product.image_url} /><span>Загрузка 3D…</span></div>}>
-            <Viewer url={model} image={product.image_url} finishes={finishes} pinViews={product.id === 'polar'} label={`3D-модель: ${product.title}`} />
+            <Viewer url={model} image={product.image_url} finishes={finishes} productId={product.id} engraving={textOnPlate} label={`3D-модель: ${product.title}`} />
           </Suspense>}
         {product.image_url && model && <div className="gallery-controls" role="group" aria-label="Виды изделия">
           <button type="button" aria-pressed={gallery === 'model'} onClick={() => setGallery('model')}><Box size={20} /> 3D</button>
@@ -137,6 +144,16 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
             </label>)}
           </div>
         </fieldset>)}
+        {product.id === 'facet' && <label className="engraving-field">
+          <span>Надпись на табличке</span>
+          <input value={engraving} maxLength={engravingLimit} placeholder="Например, За лучший проект" onChange={(event) => {
+            setEngraving(event.target.value)
+            setSavedLink('')
+            setCopied(false)
+            setCopyFailed(false)
+            setGallery('model')
+          }} />
+        </label>}
         <div className="product-order">
           <Quantity value={quantity} label={product.title} onChange={setQuantity} />
           <button className="button primary save" type="button" disabled={inSelection >= quantityLimit}

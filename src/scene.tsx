@@ -5,10 +5,12 @@ import { Box3, Mesh, MeshStandardMaterial, PMREMGenerator, Vector3, type Texture
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { asset, type OptionValue } from './catalog'
 
+import { Engraving } from './Engraving'
+
 const noFinishes: OptionValue[] = []
 
-export function Model({ url, finishes = noFinishes, centered = false }: {
-  url: string; finishes?: OptionValue[]; centered?: boolean
+export function Model({ url, finishes = noFinishes, centered = false, engraving }: {
+  url: string; finishes?: OptionValue[]; centered?: boolean; engraving?: string
 }) {
   const { scene } = useGLTF(asset(url), false, false)
   const { object, size, center, materials } = useMemo(() => {
@@ -20,14 +22,21 @@ export function Model({ url, finishes = noFinishes, centered = false }: {
       child.receiveShadow = true
       const applyFinish = (original: MeshStandardMaterial) => {
         if (!original.isMeshStandardMaterial) return original
-        const finish = finishes.find((value) => (value.material_name || 'Finish') === original.name)
+        const finish = finishes.find((value) => {
+          const name = value.material_name || 'Finish'
+          return original.name === name || original.name.startsWith(`${name}_`)
+        })
         if (!finish) return original
         const cached = materials.get(original)
         if (cached) return cached
         const updated = original.clone()
         if (finish.color) updated.color.set(finish.color)
-        updated.metalness = finish.metalness ?? updated.metalness
-        updated.roughness = finish.roughness ?? updated.roughness
+        if (original.name.endsWith('_recess')) updated.color.multiplyScalar(0.49)
+        else if (original.name.endsWith('_polished')) updated.color.multiplyScalar(1.22)
+        else {
+          updated.metalness = finish.metalness ?? updated.metalness
+          updated.roughness = finish.roughness ?? updated.roughness
+        }
         materials.set(original, updated)
         return updated
       }
@@ -41,7 +50,11 @@ export function Model({ url, finishes = noFinishes, centered = false }: {
     return { object, size, center, materials }
   }, [scene, finishes, centered])
   useEffect(() => () => materials.forEach((material) => material.dispose()), [materials])
-  return <group scale={size}><primitive object={object} position={center.clone().negate()} /></group>
+  const plate = engraving && object.getObjectByName('EngravingPlate')
+  return <group scale={size}>
+    <primitive object={object} position={center.clone().negate()} />
+    {plate && engraving && <Engraving plate={plate} text={engraving} />}
+  </group>
 }
 
 export function StudioEnvironment({ onReady }: { onReady?: (texture: Texture) => void }) {
@@ -63,8 +76,11 @@ export function StudioEnvironment({ onReady }: { onReady?: (texture: Texture) =>
   return null
 }
 
-export class ViewerBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+export class ViewerBoundary extends Component<{ fallback: ReactNode; children: ReactNode; resetKey?: string }, { failed: boolean }> {
   state = { failed: false }
   static getDerivedStateFromError() { return { failed: true } }
+  componentDidUpdate(previous: Readonly<{ resetKey?: string }>) {
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false })
+  }
   render() { return this.state.failed ? this.props.fallback : this.props.children }
 }
