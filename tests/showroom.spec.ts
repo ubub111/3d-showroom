@@ -25,6 +25,37 @@ test('категории и слайдер работают на узком и �
   expect(await page.locator('body').evaluate((body) => body.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 
+test('подписи и управление находятся за пределами 3D-сцен', async ({ page }) => {
+  test.setTimeout(60_000)
+  await page.goto('/#/catalog/tokens')
+  const slide = page.locator('.slide.is-active')
+  const model = (await slide.locator('.model-slot').boundingBox())!
+  const copy = (await slide.locator('.slide-copy').boundingBox())!
+  expect(copy.x + copy.width <= model.x || model.y + model.height <= copy.y).toBe(true)
+
+  await slide.getByRole('link', { name: 'Жетон «Компас»' }).click()
+  const viewer = page.locator('.viewer')
+  const canvas = viewer.locator('canvas')
+  await expect(canvas).toBeVisible()
+  const assertControlsBelowCanvas = () => expect.poll(async () => {
+    const stage = (await canvas.boundingBox())!
+    const controls = (await viewer.locator('.viewer-controls').boundingBox())!
+    return stage.y + stage.height - controls.y
+  }).toBeLessThanOrEqual(1)
+  await assertControlsBelowCanvas()
+  await page.getByRole('button', { name: 'На весь экран' }).click()
+  await expect(viewer).toHaveClass(/viewer-expanded/)
+  await assertControlsBelowCanvas()
+  await page.getByRole('button', { name: 'Закрыть полноэкранный просмотр' }).click()
+
+  await page.goto('/#/catalog/pins')
+  const showcase = page.locator('.pin-showcase')
+  await expect(showcase.locator('canvas')).toBeVisible()
+  const stage = (await showcase.locator('canvas').boundingBox())!
+  const caption = (await showcase.locator('.pin-scene-caption').boundingBox())!
+  expect(stage.y + stage.height).toBeLessThanOrEqual(caption.y + 1)
+})
+
 test('модель, смена отделки и сохранение комплектации', async ({ page, browser, isMobile }) => {
   test.setTimeout(75_000)
   await page.goto('/#/catalog/awards')

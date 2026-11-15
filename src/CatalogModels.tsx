@@ -30,11 +30,7 @@ function ClearFrame() {
 function ModelView({ entry, texture, animate }: { entry: PreviewEntry; texture?: Texture; animate: boolean }) {
   const { element, turn, url } = entry
   const scene = useMemo(() => new Scene(), [])
-  const camera = useMemo(() => {
-    const camera = new PerspectiveCamera(36, 1, 0.1, 30)
-    camera.position.z = 5.65
-    return camera
-  }, [])
+  const camera = useMemo(() => new PerspectiveCamera(36, 1, 0.1, 50), [])
   const group = useRef<Group>(null)
   const clip = element.closest('[data-model-clip]')
   useFrame(({ gl, clock, size }) => {
@@ -47,8 +43,9 @@ function ModelView({ entry, texture, animate }: { entry: PreviewEntry; texture?:
     if (right <= left || bottom <= top || !group.current) return
 
     const aspect = bounds.width / bounds.height
-    if (camera.aspect !== aspect) {
+    if (camera.aspect !== aspect || camera.position.z === 0) {
       camera.aspect = aspect
+      camera.position.z = 5.65 * Math.max(1, 0.92 / aspect)
       camera.updateProjectionMatrix()
     }
     const time = animate ? clock.elapsedTime : 0

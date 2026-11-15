@@ -61,9 +61,10 @@ function Carousel({ items, label, register, section }: { items: Item[]; label: s
   const position = useRef<{ x: number; y: number } | null>(null)
   const ignoreClick = useRef(false)
   const end = items.length - 1
+  const home = section === 'home'
   useEffect(() => { carouselPositions.set(section, items[active].id) }, [section, items, active])
   const move = (delta: number) => setActive((index) => Math.min(end, Math.max(0, index + delta)))
-  return <div className={section === 'home' ? 'carousel carousel-home' : 'carousel'} role="group" aria-label={label} tabIndex={0}
+  return <div className={home ? 'carousel carousel-home' : 'carousel'} role="group" aria-label={label} tabIndex={0}
     onKeyDown={(event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
       event.preventDefault()
@@ -90,28 +91,29 @@ function Carousel({ items, label, register, section }: { items: Item[]; label: s
     }}>
     <div className="slide-window" data-model-clip><div className="slide-track" style={{ '--active': active } as CSSProperties}>
       {items.map((item, index) => <article key={item.id}
-        className={`slide tone-${index % 5}${index === active ? ' is-active' : ''}`} inert={Math.abs(index - active) > 1}>
+        className={`slide tone-${index % 5}${index === active ? ' is-active' : ''}`} inert={index !== active}>
         <ModelSlot item={item} turn={0.36 + (index % 3) * 0.08} register={register} prefix="carousel" />
-        <a className="slide-hit" href={item.href} aria-label={item.title} draggable={false}
-          tabIndex={Math.abs(index - active) <= 1 ? 0 : -1} />
+        <a className="slide-hit" href={item.href} aria-label={item.title} draggable={false} />
         <div className="slide-copy" aria-hidden={index !== active}>
-          {section === 'home' && <span className="slide-kicker"><Box size={15} strokeWidth={1.5} /> 3D-коллекция</span>}
-          {item.detail && section !== 'home' && <p className="slide-detail">{item.detail}</p>}
+          {home && <span className="slide-kicker"><Box size={15} strokeWidth={1.5} /> 3D-коллекция</span>}
+          {item.detail && !home && <p className="slide-detail">{item.detail}</p>}
           <h2>{item.title}</h2>
           {item.description && <p className="slide-description">{item.description}</p>}
-          <span className="slide-action" aria-hidden="true">{section === 'home' ? 'Смотреть товары' : 'Открыть'} <ChevronRight size={15} /></span>
+          <span className="slide-action" aria-hidden="true">{home ? 'Смотреть товары' : 'Открыть'} <ChevronRight size={15} /></span>
         </div>
       </article>)}
     </div>
     </div>
-    {items.length > 1 && <>
-      <button className="carousel-arrow previous" aria-label="Предыдущий слайд" aria-disabled={active === 0} onClick={() => move(-1)}><ChevronLeft size={22} /></button>
-      <button className="carousel-arrow next" aria-label="Следующий слайд" aria-disabled={active === end} onClick={() => move(1)}><ChevronRight size={22} /></button>
-    </>}
-    {items.length > 1 && (section === 'home' ? <div className="collection-steps" aria-label="Коллекции">
-      {items.map((item, index) => <button key={item.id} type="button" aria-current={index === active ? 'true' : undefined}
-        onClick={() => setActive(index)}>{item.title}</button>)}
-    </div> : <p className="carousel-guide">Листайте карусель · нажмите на изделие</p>)}
+    {items.length > 1 && <div className="carousel-controls">
+      {home ? <div className="collection-steps" role="group" aria-label="Коллекции">
+        {items.map((item, index) => <button key={item.id} type="button" aria-current={index === active ? 'true' : undefined}
+          onClick={() => setActive(index)}>{item.title}</button>)}
+      </div> : <p className="carousel-guide">Изделие {active + 1} из {items.length}</p>}
+      <div className="carousel-arrows">
+        <button className="carousel-arrow" aria-label="Предыдущий слайд" aria-disabled={active === 0} onClick={() => move(-1)}><ChevronLeft size={21} /></button>
+        <button className="carousel-arrow" aria-label="Следующий слайд" aria-disabled={active === end} onClick={() => move(1)}><ChevronRight size={21} /></button>
+      </div>
+    </div>}
     <span className="sr-only" aria-live="polite">{items[active]?.title} · {active + 1} из {items.length}</span>
   </div>
 }

@@ -101,29 +101,33 @@ export default function Viewer({ url, image, finishes, label, productId, engravi
     <div ref={viewer} className={expanded ? 'viewer viewer-expanded' : 'viewer'} aria-label={label}
       role={expanded ? 'dialog' : undefined} aria-modal={expanded || undefined}>
       {expanded && <div className="viewer-expanded-title">{label.replace('3D-модель: ', '')}</div>}
-      <Canvas
-        frameloop={spin ? 'always' : 'demand'} shadows dpr={[1.5, 2.5]} gl={{ antialias: true }} fallback={unavailable}
-        camera={{ position: [3.35, 2.4, 4.7], fov: 38, zoom }}
-        onCreated={({ gl }) => { gl.domElement.setAttribute('aria-label', label) }}
-      >
-        <Studio />
-        <Suspense fallback={null}><Model url={url} finishes={finishes} engraving={engraving} /></Suspense>
-        <OrbitControls ref={controls} target={[0, 1.02, 0]} enablePan={false} autoRotate={spin}
-          onStart={() => setAngle(undefined)} autoRotateSpeed={0.85} minDistance={2.7} maxDistance={9} maxPolarAngle={Math.PI * 0.49} />
-      </Canvas>
-      <div className="viewer-toolbar" aria-label="Управление 3D">
-        <button ref={expandButton} type="button" aria-label={expanded ? 'Закрыть полноэкранный просмотр' : 'На весь экран'}
-          title={expanded ? 'Закрыть полноэкранный просмотр' : 'На весь экран'}
-          onClick={() => setExpanded(!expanded)}>{expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</button>
-        <button type="button" aria-label="Вращать автоматически" title="Автовращение" aria-pressed={spin} onClick={() => { setSpin(!spin); setAngle(undefined) }}><Rotate3D size={18} /></button>
-        <button type="button" aria-label="Приблизить" title="Приблизить" onClick={() => changeZoom(0.25)}><Plus size={18} /></button>
-        <button type="button" aria-label="Отдалить" title="Отдалить" onClick={() => changeZoom(-0.25)}><Minus size={18} /></button>
-        <button type="button" aria-label="Сбросить ракурс" title="Сбросить ракурс" onClick={reset}><RotateCcw size={17} /></button>
+      <div className="viewer-stage">
+        <Canvas
+          frameloop={spin ? 'always' : 'demand'} shadows dpr={[1.5, 2.5]} gl={{ antialias: true }} fallback={unavailable}
+          camera={{ position: [3.35, 2.4, 4.7], fov: 38, zoom }}
+          onCreated={({ gl }) => { gl.domElement.setAttribute('aria-label', label) }}
+        >
+          <Studio />
+          <Suspense fallback={null}><Model url={url} finishes={finishes} engraving={engraving} /></Suspense>
+          <OrbitControls ref={controls} target={[0, 1.02, 0]} enablePan={false} autoRotate={spin}
+            onStart={() => setAngle(undefined)} autoRotateSpeed={0.85} minDistance={2.7} maxDistance={9} maxPolarAngle={Math.PI * 0.49} />
+        </Canvas>
       </div>
-      {angles.length > 0 ? <div className="pin-angles" role="group" aria-label="Ракурсы модели">
-        {angles.map((view) => <button key={view.label} type="button" aria-pressed={angle === view.label}
-          onClick={() => chooseAngle(view)}>{view.label}</button>)}
-      </div> : <p className="viewer-hint">Перетаскивайте для вращения · прокручивайте для масштаба</p>}
+      <div className="viewer-controls">
+        <div className="viewer-toolbar" role="group" aria-label="Управление 3D">
+          <button ref={expandButton} type="button" aria-label={expanded ? 'Закрыть полноэкранный просмотр' : 'На весь экран'}
+            title={expanded ? 'Закрыть полноэкранный просмотр' : 'На весь экран'}
+            onClick={() => setExpanded(!expanded)}>{expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</button>
+          <button type="button" aria-label="Вращать автоматически" title="Автовращение" aria-pressed={spin} onClick={() => { setSpin(!spin); setAngle(undefined) }}><Rotate3D size={18} /></button>
+          <button type="button" aria-label="Приблизить" title="Приблизить" onClick={() => changeZoom(0.25)}><Plus size={18} /></button>
+          <button type="button" aria-label="Отдалить" title="Отдалить" onClick={() => changeZoom(-0.25)}><Minus size={18} /></button>
+          <button type="button" aria-label="Сбросить ракурс" title="Сбросить ракурс" onClick={reset}><RotateCcw size={17} /></button>
+        </div>
+        {angles.length > 0 ? <div className="pin-angles" role="group" aria-label="Ракурсы модели">
+          {angles.map((view) => <button key={view.label} type="button" aria-pressed={angle === view.label}
+            onClick={() => chooseAngle(view)}>{view.label}</button>)}
+        </div> : <p className="viewer-hint">Перетаскивайте для вращения · прокручивайте для масштаба</p>}
+      </div>
     </div>
   </ViewerBoundary>
 }
