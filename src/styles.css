@@ -347,3 +347,7 @@ legend { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
 .engraving-field input { min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: #f8fafc; font-weight: 400; }
 .viewer.viewer-expanded { position: fixed; z-index: 20; inset: 0; width: 100%; height: 100dvh; border-radius: 0; }
 .viewer-expanded-title { position: absolute; z-index: 1; top: 16px; left: 14px; padding: 8px 11px; border-radius: 7px; background: #fffdf3df; color: var(--navy); font-size: 13px; font-weight: 750; pointer-events: none; }
+
+.selection-product .selection-edit { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding-block: 4px; color: var(--blue); font-size: 12px; font-weight: 650; }
+.selection-edit:hover { text-decoration: underline; }
+.edit-context { margin: 8px 0; color: var(--muted); font-size: 13px; }

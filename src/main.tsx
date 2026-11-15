@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronRight, Link2, Search, ShoppingBag } from 'lucide-react'
 import { asset, catalog, categoryLink, categoryPath, configurationLink, configurationPrice, engravingLimit, engravingText, productLink, rubles, volumeDiscount, volumeTiers, type OptionValue, type Product } from './catalog'
 import { categories, Showroom } from './Showroom'
-import { loadSelection, persistSelection, Quantity, quantityLimit, SelectionPage } from './SelectionPage'
+import { loadSelection, persistSelection, Quantity, quantityLimit, SelectionPage, type SelectionLine } from './SelectionPage'
 import { ProductThumb, StoreDialog, StoreSearch } from './StorePanels'
 import './styles.css'
 
@@ -55,11 +55,13 @@ function initialSelection(product: Product, query: URLSearchParams) {
   }))
 }
 
-function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
+function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor, editing, onUpdate }: {
   product: Product; query: URLSearchParams; returnTo: string
   onAdd: (href: string, quantity: number) => void
   onCart: () => void
   quantityFor: (href: string) => number
+  editing?: SelectionLine
+  onUpdate: (original: string, href: string, quantity: number) => void
 }) {
   const [selection, setSelection] = useState(() => initialSelection(product, query))
   const [engraving, setEngraving] = useState(() => {
@@ -70,7 +72,7 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
   })
   const textOnPlate = engravingText(engraving)
   const [gallery, setGallery] = useState<'model' | 'photo'>('model')
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(editing?.quantity ?? 1)
   const [savedLink, setSavedLink] = useState('')
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
@@ -83,6 +85,8 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
   const price = configurationPrice(product, selected)
   const selectionHref = configurationLink(product.id, selection, textOnPlate)
   const inSelection = quantityFor(selectionHref)
+  const combinedQuantity = editing?.href === selectionHref ? quantity : quantity + inSelection
+  const canUpdate = combinedQuantity <= quantityLimit
   const path = categoryPath(product.category_id)
 
   const select = (optionId: string, value: OptionValue) => {
@@ -154,17 +158,21 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
             setGallery('model')
           }} />
         </label>}
+        {editing && <p className="edit-context">Редактирование позиции из подборки</p>}
         <div className="product-order">
           <Quantity value={quantity} label={product.title} onChange={setQuantity} />
+          {editing ? <button className="button primary save" type="button" disabled={!canUpdate}
+            onClick={() => onUpdate(editing.href, selectionHref, quantity)}><Check size={17} /> Обновить позицию</button> : <>
           <button className="button primary save" type="button" disabled={inSelection >= quantityLimit}
           onClick={() => onAdd(selectionHref, quantity)}><ShoppingBag size={17} /> В корзину</button>
           <button className="button secondary" type="button" disabled={inSelection >= quantityLimit}
-            onClick={() => { onAdd(selectionHref, quantity); onCart() }}>К оформлению</button>
+            onClick={() => { onAdd(selectionHref, quantity); onCart() }}>К оформлению</button></>}
         </div>
-        <div className="product-selection-actions">
+        {editing && !canUpdate && <p className="edit-context" role="status">Уменьшите тираж. В одной комплектации может быть до {quantityLimit} шт.</p>}
+        {!editing && <div className="product-selection-actions">
           <button type="button" onClick={save}><Link2 size={15} /> Сохранить комплектацию</button>
           <span role="status">{inSelection > 0 && <a href="#/selection">В подборке {inSelection} шт.</a>}</span>
-        </div>
+        </div>}
         {savedLink && <div className="share">
           <label htmlFor="configuration-link">Ссылка на комплектацию</label>
           <div><input id="configuration-link" readOnly value={savedLink} onFocus={(event) => event.currentTarget.select()} />
@@ -180,7 +188,7 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor }: {
           </div>
           {copyFailed && <p role="status">Выделите ссылку и скопируйте вручную.</p>}
         </div>}
-        <a className="return-link" href={returnTo}><ArrowLeft size={16} /> {returnTo === '#/selection' ? 'Вернуться к подборке' : 'Вернуться в каталог'}</a>
+        <a className="return-link" href={returnTo}><ArrowLeft size={16} /> {editing ? 'Отменить изменения' : returnTo === '#/selection' ? 'Вернуться к подборке' : 'Вернуться в каталог'}</a>
         {product.store_url && <a className="store-link" href={product.store_url}>Перейти в магазин <ArrowUpRight size={16} /></a>}
       </section>
     </div>
@@ -217,6 +225,18 @@ function App() {
   const changeQuantity = (href: string, quantity: number) => setLines((current) =>
     current.map((line) => line.href === href ? { ...line, quantity } : line))
   const removeLine = (href: string) => setLines((current) => current.filter((line) => line.href !== href))
+  const updateLine = (original: string, href: string, quantity: number) => {
+    setLines((current) => {
+      const originalLine = current.find((line) => line.href === original)
+      if (!originalLine) return current
+      const duplicate = current.find((line) => line.href === href && line.href !== original)
+      if (!duplicate) return current.map((line) => line.href === original ? { href, quantity } : line)
+      const total = duplicate.quantity + quantity
+      if (total > quantityLimit) return current
+      return current.filter((line) => line.href !== original).map((line) => line === duplicate ? { href, quantity: total } : line)
+    })
+    window.location.hash = '#/selection'
+  }
   const previousCatalog = useRef<{ route: string; product: string; scroll: number } | null>(null)
   const rememberCatalog = (product: string) => {
     if (route.startsWith('/product/')) return
@@ -243,6 +263,12 @@ function App() {
   const [pathname, search] = route.split('?')
   const [page, id, extra] = pathname.split('/').slice(1)
   const product = page === 'product' && catalog.products.find((item) => item.id === id)
+  const params = new URLSearchParams(search)
+  const editingRequested = params.get('edit-selection') === '1'
+  params.delete('edit-selection')
+  const query = params.toString()
+  const selectionSource = `#${pathname}${query ? `?${query}` : ''}`
+  const editing = product && editingRequested ? lines.find((line) => line.href === selectionSource) : undefined
   const home = !pathname || pathname === '/'
   const category = page === 'catalog' ? catalog.categories.find((item) => item.id === id) : undefined
   const active = home ? '' : categoryPath(category?.id ?? (product ? product.category_id : ''))[0]?.id
@@ -251,9 +277,9 @@ function App() {
   else if (extra !== undefined) content = <Missing />
   else if (page === 'catalog' && (!id || category)) content = <Showroom key={id ?? 'catalog'} category={category} onOpen={openProduct} onPreview={setPreview} />
   else if (page === 'selection' && !id) content = <SelectionPage lines={lines} onQuantity={changeQuantity} onRemove={removeLine} />
-  else if (product) content = <ProductPage key={route} product={product} query={new URLSearchParams(search)}
+  else if (product) content = <ProductPage key={route} product={product} query={params} editing={editing} onUpdate={updateLine}
     onAdd={addLine} onCart={() => setPanel('cart')} quantityFor={(href) => lines.find((line) => line.href === href)?.quantity ?? 0}
-    returnTo={previousCatalog.current?.product === product.id ? `#${previousCatalog.current.route || '/'}` : categoryLink(product.category_id)} />
+    returnTo={editing ? '#/selection' : previousCatalog.current?.product === product.id ? `#${previousCatalog.current.route || '/'}` : categoryLink(product.category_id)} />
   else if (page === 'menu-table' && !id) content = <div className="inner-page page-heading">
     <h1>Меню из таблицы</h1>
     <div className="menu-table"><table><thead><tr><th>Раздел</th><th>Подраздел</th><th>Изделия</th></tr></thead><tbody>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, Clipboard, ListPlus, Minus, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Clipboard, ListPlus, Minus, Pencil, Plus, Trash2 } from 'lucide-react'
 import { CheckoutForm } from './StorePanels'
 import { catalog, configurationPrice, engravingText, rubles, volumeDiscount } from './catalog'
 
@@ -15,6 +15,11 @@ export function loadSelection(): SelectionLine[] {
       && Number.isInteger(entry.quantity) && entry.quantity >= 1 && entry.quantity <= quantityLimit)
   } catch { /* Storage may be unavailable. */ }
   return []
+}
+
+function selectionEditLink(href: string) {
+  const separator = href.includes('?') ? '&' : '?'
+  return `${href}${separator}edit-selection=1`
 }
 
 export function persistSelection(lines: SelectionLine[]) {
@@ -102,7 +107,9 @@ export function SelectionPage({ lines, onQuantity, onRemove, drawer = false }: {
             {line.sku && <span className="eyebrow">{line.sku}</span>}
             {line.available ? <a href={line.href}>{line.title}<ArrowUpRight size={15} /></a> : <strong>{line.title}</strong>}
             {line.details && <p>{line.details}</p>}
-            {!line.available && <p>Комплектация больше недоступна</p>}
+            {line.available ? <a className="selection-edit" href={selectionEditLink(line.href)} aria-label={`Изменить комплектацию: ${line.title}`}>
+              <Pencil size={14} /> Изменить комплектацию
+            </a> : <p>Комплектация больше недоступна</p>}
           </div>
           <Quantity value={line.quantity} label={line.details ? `${line.title}, ${line.details}` : line.title}
             onChange={(next) => { onQuantity(line.href, next); setCopyStatus('') }} />
