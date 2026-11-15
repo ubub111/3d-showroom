@@ -45,11 +45,10 @@ function Arrangement({ products, turn, drag, motion, onOpen }: {
 }
 
 export default function PinShowcase({ products, onOpen }: { products: Product[]; onOpen: (product: Product) => void }) {
-  const stage = useRef<HTMLDivElement>(null)
   const turn = useRef(0)
   const drag = useRef<{ x: number; y: number; start: number } | null>(null)
   const motion = useRef(false)
-  return <div className="pin-showcase" ref={stage}
+  return <div className="pin-showcase"
     onPointerDown={(event) => {
       if (event.button !== 0) return
       motion.current = false
@@ -67,7 +66,7 @@ export default function PinShowcase({ products, onOpen }: { products: Product[];
     onPointerLeave={() => { drag.current = null }}
     onPointerCancel={() => { drag.current = null }}>
     <ViewerBoundary fallback={<p className="pin-scene-caption">3D недоступно</p>}>
-      <Canvas fallback={<p className="pin-scene-caption">3D недоступно</p>} eventSource={stage} dpr={[1, 2]} camera={{ position: [0, 1.55, 10.35], fov: 31 }}
+      <Canvas fallback={<p className="pin-scene-caption">3D недоступно</p>} dpr={[1, 2]} camera={{ position: [0, 1.55, 10.35], fov: 31 }}
         style={{ touchAction: 'pan-y' }} onCreated={({ gl, scene }) => {
           scene.environmentIntensity = 0.74
           gl.domElement.setAttribute('aria-label', 'Значки в общей 3D-сцене')
