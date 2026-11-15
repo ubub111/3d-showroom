@@ -12,7 +12,7 @@ test('категории и слайдер работают на узком и �
   await next.press('ArrowLeft')
   await expect(carousel.locator('.is-active h2')).toHaveText('Жетоны')
   await page.getByRole('button', { name: 'Список' }).click()
-  await expect(page.locator('.vertical-item')).toHaveCount(4)
+  await expect(page.locator('.vertical-item')).toHaveCount(5)
   await page.locator('.vertical-item').getByRole('link', { name: /Награды/ }).click()
   await expect(page.getByRole('heading', { name: 'Награды', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Карусель' }).click()

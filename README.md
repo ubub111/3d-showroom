@@ -31,6 +31,15 @@ souvenirs,,Сувениры,50,,Демонстрационный раздел
 
 Демонстрационные модели созданы из геометрии Three.js и сохранены в GLB. Чтобы пересоздать их, запустите `npm run models`. Обложки сгенерированы для демо. Для реальных изделий замените модели, изображения, цены и ссылки.
 
+## Источники 3D-моделей
+
+- Глазурованная ваза — [Ceramic Vase 01, James Ray Cock](https://polyhaven.com/a/ceramic_vase_01).
+- Латунный кувшин — [Brass Vase 04, Rico Cilliers](https://polyhaven.com/a/brass_vase_04).
+
+- Кружка «Прилив» — [Mug – Original Drink Vessel, Innerscene](https://www.innerscene.com/tools/library/3d-parts/mug-original-drink-vessel-5af2cfa5).
+
+Модели Poly Haven распространяются по [лицензии CC0](https://polyhaven.com/license). Модели вазы и кувшина с текстурами 2K упакованы в GLB. Модель Innerscene также опубликована под CC0. Изображения карточек отрендерены из моделей.
+
 ## Проверка
 
 ```bash

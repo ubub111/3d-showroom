@@ -6,3 +6,6 @@ dune,mugs,Кружка «Дюна»,MG-001,1450,/models/dune.glb,/images/model-d
 medal,medals,Медаль «Север»,AW-002,1800,/models/medal.glb,/images/model-medal.webp,10,,Памятная медаль из демонстрационного каталога.
 horizon,pins,Значок «Горизонт»,PN-002,730,/models/horizon.glb,/images/model-horizon.webp,20,,Щит с силуэтом гор и рельефной металлической окантовкой.
 orbit,pins,Значок «Орбита»,PN-003,760,/models/orbit.glb,/images/model-orbit.webp,30,,Круглый эмалевый значок с рельефной орбитой и застёжкой-бабочкой.
+porcelain-vase,decor,Глазурованная ваза,DC-001,3400,/models/porcelain-vase.glb,/images/model-porcelain-vase.webp,10,,Светлая керамика с рифлёным краем и глянцевой глазурью.
+brass-pitcher,decor,Латунный кувшин,DC-002,4900,/models/brass-pitcher.glb,/images/model-brass-pitcher.webp,20,,Латунь с патиной и тонким орнаментом. Рассмотрите фактуру металла и фигурную ручку в 3D.
+glazed-mug,mugs,Кружка «Прилив»,MG-002,1590,/models/glazed-mug.glb,/images/model-glazed-mug.webp,20,,Керамическая кружка с двухцветной глазурью. В 3D можно рассмотреть ободок и внутреннюю поверхность.
