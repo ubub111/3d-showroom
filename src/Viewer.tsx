@@ -1,6 +1,6 @@
-import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
-import { PerspectiveCamera } from 'three'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { MathUtils, PerspectiveCamera, Spherical, Vector3 } from 'three'
 import { OrbitControls } from '@react-three/drei/core/OrbitControls'
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib'
 import { Box, Maximize2, Minimize2, Minus, Plus, RotateCcw, Rotate3D } from 'lucide-react'
@@ -21,16 +21,12 @@ const compassAngles = [
   { label: 'Кромка', position: [4.8, 1.57, 1.05], zoom: 1.48 },
 ] as const
 
-function CameraZoom({ value }: { value: number }) {
-  const { camera, invalidate } = useThree()
-  useLayoutEffect(() => {
-    if (!(camera instanceof PerspectiveCamera)) return
-    camera.zoom = value
-    camera.updateProjectionMatrix()
-    invalidate()
-  }, [camera, invalidate, value])
-  return null
-}
+type CameraPosition = readonly [number, number, number]
+
+const initialPosition: CameraPosition = [3.35, 2.4, 4.7]
+const orbitTarget: CameraPosition = [0, 1.02, 0]
+const minZoom = 0.75
+const maxZoom = 1.75
 
 function Studio() {
   return <>
@@ -87,28 +83,68 @@ export default function Viewer({ url, image, finishes, label, productId, engravi
     }
   }, [expanded])
   const controls = useRef<OrbitControlsType>(null)
-  const [zoom, setZoom] = useState(1)
+  const invalidateScene = useRef<() => void>(null)
+  const motion = useRef<{ frame: number; zoom: number; position?: CameraPosition } | null>(null)
+  const cancelMotion = useCallback(() => {
+    if (motion.current) cancelAnimationFrame(motion.current.frame)
+    motion.current = null
+  }, [])
+  useEffect(() => cancelMotion, [cancelMotion])
   const [spin, setSpin] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [angle, setAngle] = useState<string>()
   const [readyUrl, setReadyUrl] = useState<string>()
   const markReady = useCallback(() => setReadyUrl(url), [url])
   const angles = productId === 'polar' ? pinAngles : productId === 'compass' ? compassAngles : []
-  const chooseAngle = ({ position, label, zoom }: typeof pinAngles[number] | typeof compassAngles[number]) => {
+  const moveCamera = (zoom: number, position?: CameraPosition) => {
     const orbit = controls.current
-    if (!orbit) return
-    orbit.object.position.set(position[0], position[1], position[2])
-    orbit.autoRotate = false
-    orbit.update()
+    const camera = orbit?.object
+    if (!orbit || !(camera instanceof PerspectiveCamera)) return
+    cancelMotion()
+
+    const startZoom = camera.zoom
+    const from = new Spherical().setFromVector3(camera.position.clone().sub(orbit.target))
+    const to = position ? new Spherical().setFromVector3(new Vector3(...position).sub(orbit.target)) : from
+    const azimuth = MathUtils.euclideanModulo(to.theta - from.theta + Math.PI, 2 * Math.PI) - Math.PI
+    const stepPosition = new Spherical()
+    const started = performance.now()
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : position ? 460 : 220
+
+    const step = (now: number) => {
+      const progress = duration ? MathUtils.clamp((now - started) / duration, 0, 1) : 1
+      const eased = progress * progress * (3 - 2 * progress)
+      if (position) {
+        stepPosition.set(MathUtils.lerp(from.radius, to.radius, eased), MathUtils.lerp(from.phi, to.phi, eased), from.theta + azimuth * eased)
+        camera.position.setFromSpherical(stepPosition).add(orbit.target)
+        orbit.update()
+      }
+      camera.zoom = MathUtils.lerp(startZoom, zoom, eased)
+      camera.updateProjectionMatrix()
+      invalidateScene.current?.()
+      motion.current = progress < 1 ? { frame: requestAnimationFrame(step), zoom, position } : null
+    }
+    if (duration) motion.current = { frame: requestAnimationFrame(step), zoom, position }
+    else step(started)
+  }
+  const stopSpin = () => {
+    if (controls.current) controls.current.autoRotate = false
     setSpin(false)
-    setZoom(zoom)
+  }
+  const chooseAngle = ({ position, label, zoom }: typeof pinAngles[number] | typeof compassAngles[number]) => {
+    stopSpin()
+    moveCamera(zoom, position)
     setAngle(label)
   }
-  const changeZoom = (step: number) => setZoom((value) => Math.max(0.75, Math.min(1.75, value + step)))
+  const changeZoom = (step: number) => {
+    const camera = controls.current?.object
+    if (!(camera instanceof PerspectiveCamera)) return
+    const current = motion.current?.zoom ?? camera.zoom
+    const zoom = MathUtils.clamp(current + step, minZoom, maxZoom)
+    if (zoom !== current) moveCamera(zoom, motion.current?.position)
+  }
   const reset = () => {
-    controls.current?.reset()
-    setZoom(1)
+    stopSpin()
+    moveCamera(1, initialPosition)
     setAngle(undefined)
-    setSpin(false)
   }
   if (!url) return <Fallback image={image} message="3D-модель пока недоступна" />
   const unavailable = <Fallback image={image} message="Не удалось открыть 3D-модель" />
@@ -119,14 +155,16 @@ export default function Viewer({ url, image, finishes, label, productId, engravi
       <div className="viewer-stage">
         <Canvas
           frameloop={spin ? 'always' : 'demand'} shadows dpr={[1.5, 2.5]} gl={{ antialias: true }} fallback={unavailable}
-          camera={{ position: [3.35, 2.4, 4.7], fov: 38 }}
-          onCreated={({ gl }) => { gl.domElement.setAttribute('aria-label', label) }}
+          camera={{ position: [...initialPosition], fov: 38 }}
+          onCreated={({ gl, invalidate }) => {
+            invalidateScene.current = invalidate
+            gl.domElement.setAttribute('aria-label', label)
+          }}
         >
-          <CameraZoom value={zoom} />
           <Studio />
           <Suspense fallback={null}><Model url={url} finishes={finishes} engraving={engraving} onReady={markReady} /></Suspense>
-          <OrbitControls ref={controls} target={[0, 1.02, 0]} enablePan={false} autoRotate={spin}
-            onStart={() => setAngle(undefined)} autoRotateSpeed={0.85} minDistance={2.7} maxDistance={9} maxPolarAngle={Math.PI * 0.49} />
+          <OrbitControls ref={controls} target={[...orbitTarget]} enablePan={false} autoRotate={spin}
+            onStart={() => { cancelMotion(); setAngle(undefined) }} autoRotateSpeed={0.85} minDistance={2.7} maxDistance={9} maxPolarAngle={Math.PI * 0.49} />
         </Canvas>
         <ViewerPoster image={image} ready={readyUrl === url} />
       </div>
@@ -135,7 +173,7 @@ export default function Viewer({ url, image, finishes, label, productId, engravi
           <button ref={expandButton} type="button" aria-label={expanded ? 'Закрыть полноэкранный просмотр' : 'На весь экран'}
             title={expanded ? 'Закрыть полноэкранный просмотр' : 'На весь экран'}
             onClick={() => setExpanded(!expanded)}>{expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</button>
-          <button type="button" aria-label="Вращать автоматически" title="Автовращение" aria-pressed={spin} onClick={() => { setSpin(!spin); setAngle(undefined) }}><Rotate3D size={18} /></button>
+          <button type="button" aria-label="Вращать автоматически" title="Автовращение" aria-pressed={spin} onClick={() => { cancelMotion(); setSpin(!spin); setAngle(undefined) }}><Rotate3D size={18} /></button>
           <button type="button" aria-label="Приблизить" title="Приблизить" onClick={() => changeZoom(0.25)}><Plus size={18} /></button>
           <button type="button" aria-label="Отдалить" title="Отдалить" onClick={() => changeZoom(-0.25)}><Minus size={18} /></button>
           <button type="button" aria-label="Сбросить ракурс" title="Сбросить ракурс" onClick={reset}><RotateCcw size={17} /></button>
