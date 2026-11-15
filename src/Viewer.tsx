@@ -1,9 +1,11 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
+import { PerspectiveCamera } from 'three'
 import { OrbitControls } from '@react-three/drei/core/OrbitControls'
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib'
 import { Box, Maximize2, Minimize2, Minus, Plus, RotateCcw, Rotate3D } from 'lucide-react'
 import { asset, type OptionValue } from './catalog'
+import { ViewerPoster } from './StorePanels'
 import { Model, StudioEnvironment, ViewerBoundary } from './scene'
 
 const pinAngles = [
@@ -18,6 +20,17 @@ const compassAngles = [
   { label: 'Оборот', position: [-0.22, 1.48, -5.3], zoom: 1.15 },
   { label: 'Кромка', position: [4.8, 1.57, 1.05], zoom: 1.48 },
 ] as const
+
+function CameraZoom({ value }: { value: number }) {
+  const { camera, invalidate } = useThree()
+  useLayoutEffect(() => {
+    if (!(camera instanceof PerspectiveCamera)) return
+    camera.zoom = value
+    camera.updateProjectionMatrix()
+    invalidate()
+  }, [camera, invalidate, value])
+  return null
+}
 
 function Studio() {
   return <>
@@ -77,6 +90,8 @@ export default function Viewer({ url, image, finishes, label, productId, engravi
   const [zoom, setZoom] = useState(1)
   const [spin, setSpin] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [angle, setAngle] = useState<string>()
+  const [readyUrl, setReadyUrl] = useState<string>()
+  const markReady = useCallback(() => setReadyUrl(url), [url])
   const angles = productId === 'polar' ? pinAngles : productId === 'compass' ? compassAngles : []
   const chooseAngle = ({ position, label, zoom }: typeof pinAngles[number] | typeof compassAngles[number]) => {
     const orbit = controls.current
@@ -104,14 +119,16 @@ export default function Viewer({ url, image, finishes, label, productId, engravi
       <div className="viewer-stage">
         <Canvas
           frameloop={spin ? 'always' : 'demand'} shadows dpr={[1.5, 2.5]} gl={{ antialias: true }} fallback={unavailable}
-          camera={{ position: [3.35, 2.4, 4.7], fov: 38, zoom }}
+          camera={{ position: [3.35, 2.4, 4.7], fov: 38 }}
           onCreated={({ gl }) => { gl.domElement.setAttribute('aria-label', label) }}
         >
+          <CameraZoom value={zoom} />
           <Studio />
-          <Suspense fallback={null}><Model url={url} finishes={finishes} engraving={engraving} /></Suspense>
+          <Suspense fallback={null}><Model url={url} finishes={finishes} engraving={engraving} onReady={markReady} /></Suspense>
           <OrbitControls ref={controls} target={[0, 1.02, 0]} enablePan={false} autoRotate={spin}
             onStart={() => setAngle(undefined)} autoRotateSpeed={0.85} minDistance={2.7} maxDistance={9} maxPolarAngle={Math.PI * 0.49} />
         </Canvas>
+        <ViewerPoster image={image} ready={readyUrl === url} />
       </div>
       <div className="viewer-controls">
         <div className="viewer-toolbar" role="group" aria-label="Управление 3D">

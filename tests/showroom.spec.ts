@@ -25,6 +25,38 @@ test('категории и слайдер работают на узком и �
   expect(await page.locator('body').evaluate((body) => body.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 
+test('карусель следует за жестом, а фото остаётся до загрузки 3D', async ({ page }) => {
+  test.setTimeout(60_000)
+  await page.goto('/')
+  const carousel = page.getByRole('group', { name: 'Слайдер категорий' })
+  const slideWindow = carousel.locator('.slide-window')
+  await slideWindow.dispatchEvent('pointerdown', { button: 0, clientX: 240, clientY: 130 })
+  await slideWindow.dispatchEvent('pointermove', { buttons: 1, clientX: 140, clientY: 132 })
+  await expect(slideWindow).toHaveAttribute('data-dragging', '')
+  expect(await slideWindow.evaluate((element) => element.style.getPropertyValue('--drag'))).toBe('-100px')
+  await slideWindow.dispatchEvent('pointerup', { button: 0, clientX: 140, clientY: 132 })
+  await expect(carousel.locator('.is-active h2')).toHaveText('Значки')
+  await expect(slideWindow).not.toHaveAttribute('data-dragging')
+
+  let releaseModel!: () => void
+  const loading = new Promise<void>((resolve) => { releaseModel = resolve })
+  await page.route('**/models/facet.glb', async (route) => {
+    await loading
+    await route.continue()
+  })
+  try {
+    await page.goto('/?load-model=1#/product/facet')
+    const viewer = page.locator('.viewer')
+    await expect(viewer.locator('canvas')).toBeVisible()
+    await expect(viewer.locator('.viewer-poster')).toHaveAttribute('data-ready', 'false')
+    releaseModel()
+    await expect(viewer.locator('.viewer-poster')).toHaveAttribute('data-ready', 'true', { timeout: 15_000 })
+    await expect(viewer.locator('.viewer-poster')).toBeHidden()
+  } finally {
+    releaseModel()
+  }
+})
+
 test('подписи и управление находятся за пределами 3D-сцен', async ({ page }) => {
   test.setTimeout(60_000)
   await page.goto('/#/catalog/tokens')
@@ -87,9 +119,13 @@ test('модель, смена отделки и сохранение компл
   await page.getByText('Высокая', { exact: true }).click()
   expect((await tallResponse).ok()).toBeTruthy()
   await expect(page.locator('.price')).toHaveText(/6\s*100/)
-  const tallFrame = await captureModel()
+  await expect(viewer.locator('.viewer-poster')).toBeHidden()
+  const tallFrame = await canvas.screenshot()
   await page.getByRole('button', { name: 'Приблизить' }).click()
-  await expect.poll(async () => (await captureModel()).equals(tallFrame)).toBe(false)
+  await expect.poll(async () => (await canvas.screenshot()).equals(tallFrame)).toBe(false)
+  const zoomedFrame = await canvas.screenshot()
+  await page.getByRole('button', { name: 'Отдалить' }).click()
+  await expect.poll(async () => (await canvas.screenshot()).equals(zoomedFrame)).toBe(false)
   await page.getByRole('button', { name: 'Сбросить ракурс' }).click()
   await page.getByRole('button', { name: 'Сохранить комплектацию' }).click()
   const link = await page.getByLabel('Ссылка на комплектацию').inputValue()

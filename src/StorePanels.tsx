@@ -33,6 +33,13 @@ export function ProductThumb({ product }: { product: Product }) {
   return image ? <img src={asset(image)} alt="" loading="lazy" /> : <Box size={28} strokeWidth={1.25} />
 }
 
+export function ViewerPoster({ image, ready = false }: { image?: string; ready?: boolean }) {
+  return <div className="viewer-poster" data-ready={ready} aria-hidden={ready}>
+    {image && <img src={asset(image)} alt="" />}
+    <span role="status">Загрузка 3D…</span>
+  </div>
+}
+
 const normalize = (value: string) => value.toLocaleLowerCase('ru').replaceAll('ё', 'е').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
 export function StoreSearch({ onClose, onOpen }: { onClose: () => void; onOpen: (product: Product) => void }) {

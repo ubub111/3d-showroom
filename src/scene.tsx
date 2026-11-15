@@ -9,8 +9,12 @@ import { Engraving } from './Engraving'
 
 const noFinishes: OptionValue[] = []
 
-export function Model({ url, finishes = noFinishes, centered = false, engraving }: {
-  url: string; finishes?: OptionValue[]; centered?: boolean; engraving?: string
+export function preloadModel(url: string) {
+  useGLTF.preload(asset(url), false, false)
+}
+
+export function Model({ url, finishes = noFinishes, centered = false, engraving, onReady }: {
+  url: string; finishes?: OptionValue[]; centered?: boolean; engraving?: string; onReady?: () => void
 }) {
   const { scene } = useGLTF(asset(url), false, false)
   const { object, size, center, materials } = useMemo(() => {
@@ -50,6 +54,7 @@ export function Model({ url, finishes = noFinishes, centered = false, engraving 
     return { object, size, center, materials }
   }, [scene, finishes, centered])
   useEffect(() => () => materials.forEach((material) => material.dispose()), [materials])
+  useEffect(() => { onReady?.() }, [scene, onReady])
   const plate = engraving && object.getObjectByName('EngravingPlate')
   return <group scale={size}>
     <primitive object={object} position={center.clone().negate()} />

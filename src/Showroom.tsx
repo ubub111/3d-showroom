@@ -58,11 +58,29 @@ const carouselPositions = new Map<string, string>()
 
 function Carousel({ items, label, register, section }: { items: Item[]; label: string; register: Register; section: string }) {
   const [active, setActive] = useState(() => Math.max(0, items.findIndex((item) => item.id === carouselPositions.get(section))))
-  const position = useRef<{ x: number; y: number } | null>(null)
+  const position = useRef<{ x: number; y: number; horizontal: boolean } | null>(null)
   const ignoreClick = useRef(false)
   const end = items.length - 1
+  const resetDrag = (slideWindow: HTMLElement) => {
+    if (position.current?.horizontal) ignoreClick.current = true
+    position.current = null
+    delete slideWindow.dataset.dragging
+    slideWindow.style.removeProperty('--drag')
+  }
   const home = section === 'home'
   useEffect(() => { carouselPositions.set(section, items[active].id) }, [section, items, active])
+  const previousModel = items[active - 1]?.model
+  const nextModel = items[active + 1]?.model
+  useEffect(() => {
+    if (!previousModel && !nextModel) return
+    let current = true
+    void import('./scene').then(({ preloadModel }) => {
+      if (!current) return
+      if (previousModel) preloadModel(previousModel)
+      if (nextModel) preloadModel(nextModel)
+    }).catch(() => { /* The visible scene handles rendering errors. */ })
+    return () => { current = false }
+  }, [previousModel, nextModel])
   const move = (delta: number) => setActive((index) => Math.min(end, Math.max(0, index + delta)))
   return <div className={home ? 'carousel carousel-home' : 'carousel'} role="group" aria-label={label} tabIndex={0}
     onKeyDown={(event) => {
@@ -70,39 +88,59 @@ function Carousel({ items, label, register, section }: { items: Item[]; label: s
       event.preventDefault()
       move(event.key === 'ArrowRight' ? 1 : -1)
     }}
-    onPointerDown={(event) => {
-      ignoreClick.current = false
-      position.current = event.button === 0 ? { x: event.clientX, y: event.clientY } : null
-    }}
-    onPointerUp={(event) => {
-      const start = position.current
-      position.current = null
-      if (!start) return
-      const dx = event.clientX - start.x
-      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(event.clientY - start.y)) {
-        ignoreClick.current = true
-        move(dx < 0 ? 1 : -1)
-      }
-    }}
-    onPointerCancel={() => { position.current = null }}
-    onClickCapture={(event) => {
-      if (ignoreClick.current && event.detail > 0) event.preventDefault()
-      ignoreClick.current = false
-    }}>
-    <div className="slide-window" data-model-clip><div className="slide-track" style={{ '--active': active } as CSSProperties}>
-      {items.map((item, index) => <article key={item.id}
-        className={`slide tone-${index % 5}${index === active ? ' is-active' : ''}`} inert={index !== active}>
-        <ModelSlot item={item} turn={0.36 + (index % 3) * 0.08} register={register} prefix="carousel" />
-        <a className="slide-hit" href={item.href} aria-label={item.title} draggable={false} />
-        <div className="slide-copy" aria-hidden={index !== active}>
-          {home && <span className="slide-kicker"><Box size={15} strokeWidth={1.5} /> 3D-коллекция</span>}
-          {item.detail && !home && <p className="slide-detail">{item.detail}</p>}
-          <h2>{item.title}</h2>
-          {item.description && <p className="slide-description">{item.description}</p>}
-          <span className="slide-action" aria-hidden="true">{home ? 'Смотреть товары' : 'Открыть'} <ChevronRight size={15} /></span>
-        </div>
-      </article>)}
-    </div>
+  >
+    <div className="slide-window" data-model-clip
+      onPointerDown={(event) => {
+        ignoreClick.current = false
+        position.current = items.length > 1 && event.button === 0
+          ? { x: event.clientX, y: event.clientY, horizontal: false }
+          : null
+      }}
+      onPointerMove={(event) => {
+        const start = position.current
+        if (!start) return
+        const dx = event.clientX - start.x
+        if (!start.horizontal) {
+          const dy = event.clientY - start.y
+          if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return
+          if (Math.abs(dy) >= Math.abs(dx)) {
+            position.current = null
+            return
+          }
+          start.horizontal = true
+        }
+        const atEdge = dx > 0 ? active === 0 : active === end
+        const distance = Math.min(Math.abs(dx), event.currentTarget.clientWidth)
+        event.currentTarget.style.setProperty('--drag', `${Math.sign(dx) * distance * (atEdge ? 0.18 : 1)}px`)
+        event.currentTarget.dataset.dragging = ''
+      }}
+      onPointerUp={(event) => {
+        const start = position.current
+        resetDrag(event.currentTarget)
+        if (!start?.horizontal) return
+        const dx = event.clientX - start.x
+        if (Math.abs(dx) > 45) move(dx < 0 ? 1 : -1)
+      }}
+      onPointerCancel={(event) => resetDrag(event.currentTarget)}
+      onPointerLeave={(event) => resetDrag(event.currentTarget)}
+      onClickCapture={(event) => {
+        if (ignoreClick.current && event.detail > 0) event.preventDefault()
+        ignoreClick.current = false
+      }}>
+      <div className="slide-track" style={{ '--active': active } as CSSProperties}>
+        {items.map((item, index) => <article key={item.id}
+          className={`slide tone-${index % 5}${index === active ? ' is-active' : ''}`} inert={index !== active}>
+          <ModelSlot item={item} turn={0.36 + (index % 3) * 0.08} register={register} prefix="carousel" />
+          <a className="slide-hit" href={item.href} aria-label={item.title} draggable={false} />
+          <div className="slide-copy" aria-hidden={index !== active}>
+            {home && <span className="slide-kicker"><Box size={15} strokeWidth={1.5} /> 3D-коллекция</span>}
+            {item.detail && !home && <p className="slide-detail">{item.detail}</p>}
+            <h2>{item.title}</h2>
+            {item.description && <p className="slide-description">{item.description}</p>}
+            <span className="slide-action" aria-hidden="true">{home ? 'Смотреть товары' : 'Открыть'} <ChevronRight size={15} /></span>
+          </div>
+        </article>)}
+      </div>
     </div>
     {items.length > 1 && <div className="carousel-controls">
       {home ? <div className="collection-steps" role="group" aria-label="Коллекции">

@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, Box, Check, ChevronRight, Link2, S
 import { asset, catalog, categoryLink, categoryPath, configurationLink, configurationPrice, engravingLimit, engravingText, productLink, rubles, volumeDiscount, volumeTiers, type OptionValue, type Product } from './catalog'
 import { categories, Showroom } from './Showroom'
 import { loadSelection, persistSelection, Quantity, quantityLimit, SelectionPage, type SelectionLine } from './SelectionPage'
-import { ProductThumb, StoreDialog, StoreSearch } from './StorePanels'
+import { ProductThumb, StoreDialog, StoreSearch, ViewerPoster } from './StorePanels'
 import './styles.css'
 
 const Viewer = lazy(() => import('./Viewer'))
@@ -113,7 +113,7 @@ function ProductPage({ product, query, returnTo, onAdd, onCart, quantityFor, edi
     <div className="configuration">
       <div className="product-gallery">
         {gallery === 'photo' && product.image_url ? <div className="viewer-fallback"><img src={asset(product.image_url)} alt={product.title} /></div> :
-          <Suspense fallback={<div className="viewer-fallback"><Cover path={product.image_url} /><span>Загрузка 3D…</span></div>}>
+          <Suspense fallback={<div className="viewer"><div className="viewer-stage"><ViewerPoster image={product.image_url} /></div><div className="viewer-controls-loading" /></div>}>
             <Viewer url={model} image={product.image_url} finishes={finishes} productId={product.id} engraving={textOnPlate} label={`3D-модель: ${product.title}`} />
           </Suspense>}
         {product.image_url && model && <div className="gallery-controls" role="group" aria-label="Виды изделия">
@@ -303,7 +303,7 @@ function App() {
       if (!(target instanceof Element)) return
       const href = target.closest('a')?.getAttribute('href')
       if (href?.startsWith('#/product/')) rememberCatalog(href.slice('#/product/'.length).split('?')[0])
-    }}>{content}</main>
+    }}><div key={pathname} className="page-content">{content}</div></main>
     {panel === 'search' && <StoreSearch onClose={() => setPanel(null)} onOpen={(product) => {
       setPanel(null)
       openProduct(product)
