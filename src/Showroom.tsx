@@ -206,7 +206,12 @@ export function Showroom({ category, home = false, onOpen, onPreview }: { catego
       </Suspense>
       <div className="pin-links" aria-label="Изделия в разделе">
         {products.map((product) => <a key={product.id} href={productLink(product.id)}>
-          {product.title}<ArrowUpRight size={16} />
+          <span className="pin-card-image"><ProductThumb product={product} /></span>
+          <span className="pin-card-info">
+            <strong>{product.title}</strong>
+            {product.price !== undefined && <small>от {rubles.format(product.price)}</small>}
+          </span>
+          <ArrowUpRight className="pin-card-arrow" size={16} aria-hidden="true" />
         </a>)}
       </div>
     </> : items.length ? vertical ? <Vertical items={items} register={register} /> :
