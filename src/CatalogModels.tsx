@@ -52,8 +52,8 @@ function ModelView({ entry, texture, animate }: { entry: PreviewEntry; texture?:
       camera.updateProjectionMatrix()
     }
     const time = animate ? clock.elapsedTime : 0
-    group.current.rotation.y = turn + time * 0.43
-    group.current.position.y = 0.06 * Math.sin(time * 1.6 + turn)
+    group.current.rotation.y = turn + time * 0.34
+    group.current.position.y = 0.036 * Math.sin(time * 1.2 + turn)
     gl.setViewport(bounds.left, size.height - bounds.bottom, bounds.width, bounds.height)
     gl.setScissor(left, size.height - bottom, right - left, bottom - top)
     gl.setScissorTest(true)

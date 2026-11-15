@@ -63,7 +63,7 @@ function Carousel({ items, label, register, section }: { items: Item[]; label: s
   const end = items.length - 1
   useEffect(() => { carouselPositions.set(section, items[active].id) }, [section, items, active])
   const move = (delta: number) => setActive((index) => Math.min(end, Math.max(0, index + delta)))
-  return <div className="carousel" role="group" aria-label={label} tabIndex={0}
+  return <div className={section === 'home' ? 'carousel carousel-home' : 'carousel'} role="group" aria-label={label} tabIndex={0}
     onKeyDown={(event) => {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
       event.preventDefault()
@@ -94,8 +94,9 @@ function Carousel({ items, label, register, section }: { items: Item[]; label: s
         <ModelSlot item={item} turn={0.36 + (index % 3) * 0.08} register={register} prefix="carousel" />
         <a className="slide-hit" href={item.href} aria-label={item.title} draggable={false}
           tabIndex={Math.abs(index - active) <= 1 ? 0 : -1} />
-        <div className="slide-copy">
-          {item.detail && <p className="slide-detail">{item.detail}</p>}
+        <div className="slide-copy" aria-hidden={index !== active}>
+          {section === 'home' && <span className="slide-kicker"><Box size={15} strokeWidth={1.5} /> 3D-коллекция</span>}
+          {item.detail && section !== 'home' && <p className="slide-detail">{item.detail}</p>}
           <h2>{item.title}</h2>
           {item.description && <p className="slide-description">{item.description}</p>}
           <span className="slide-action" aria-hidden="true">{section === 'home' ? 'Смотреть товары' : 'Открыть'} <ChevronRight size={15} /></span>
@@ -107,7 +108,10 @@ function Carousel({ items, label, register, section }: { items: Item[]; label: s
       <button className="carousel-arrow previous" aria-label="Предыдущий слайд" aria-disabled={active === 0} onClick={() => move(-1)}><ChevronLeft size={22} /></button>
       <button className="carousel-arrow next" aria-label="Следующий слайд" aria-disabled={active === end} onClick={() => move(1)}><ChevronRight size={22} /></button>
     </>}
-    {items.length > 1 && <p className="carousel-guide">Листайте карусель · нажмите на изделие</p>}
+    {items.length > 1 && (section === 'home' ? <div className="collection-steps" aria-label="Коллекции">
+      {items.map((item, index) => <button key={item.id} type="button" aria-current={index === active ? 'true' : undefined}
+        onClick={() => setActive(index)}>{item.title}</button>)}
+    </div> : <p className="carousel-guide">Листайте карусель · нажмите на изделие</p>)}
     <span className="sr-only" aria-live="polite">{items[active]?.title} · {active + 1} из {items.length}</span>
   </div>
 }
@@ -217,7 +221,7 @@ export function Showroom({ category, home = false, onOpen, onPreview }: { catego
     </> : items.length ? vertical ? <Vertical items={items} register={register} /> :
       <Carousel items={items} label={label} register={register} section={home ? 'home' : category?.id ?? 'catalog'} /> :
       <p className="empty-state">В этом разделе пока нет изделий.</p>}
-    {home && <div className="home-view-controls">{layoutToggle}</div>}
+    {home && <div className="home-view-controls"><h2>Каталог изделий</h2>{layoutToggle}</div>}
     {entries.length > 0 && <Suspense fallback={null}><CatalogModels entries={entries} /></Suspense>}
     {home && <ProductRows sections={categories} onPreview={onPreview} />}
     {home && !vertical && <ModelStrip items={items} register={register} />}
